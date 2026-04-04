@@ -1,22 +1,97 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+import api from '../../services/api';
 
-const initialProducts = [
-  { id: 1, sku: 'CHR-0092-MB', name: 'Chrono Lux V2 - Midnight Edition', category: 'Electronics', stock: 142, reorderPoint: 50, price: 289.99, cost: 185.00, status: 'In Stock', location: 'Warehouse A', lastUpdated: '2024-10-24' },
-  { id: 2, sku: 'PSD-5000-SIL', name: 'ProStream Desktop 5000', category: 'Electronics', stock: 38, reorderPoint: 40, price: 369.00, cost: 220.00, status: 'Low Stock', location: 'Warehouse B', lastUpdated: '2024-10-23' },
-  { id: 3, sku: 'SW-300-NC', name: 'SonicWave Noise Cancelling Gen 3', category: 'Audio', stock: 215, reorderPoint: 80, price: 149.99, cost: 72.00, status: 'In Stock', location: 'Warehouse A', lastUpdated: '2024-10-24' },
-  { id: 4, sku: 'UW-34-BLK', name: 'Ultra Wide 34" Monitor', category: 'Displays', stock: 12, reorderPoint: 20, price: 749.00, cost: 480.00, status: 'Low Stock', location: 'Warehouse C', lastUpdated: '2024-10-22' },
-  { id: 5, sku: 'MTP-PRO-SIL', name: 'Magic Trackpad Pro', category: 'Peripherals', stock: 8, reorderPoint: 25, price: 129.99, cost: 65.00, status: 'Low Stock', location: 'Warehouse A', lastUpdated: '2024-10-21' },
-  { id: 6, sku: 'SLS-5M-RGB', name: 'Smart Light Strip (5m)', category: 'Smart Home', stock: 5, reorderPoint: 30, price: 49.99, cost: 18.00, status: 'Critical', location: 'Warehouse B', lastUpdated: '2024-10-20' },
-  { id: 7, sku: 'PXG-2000-RD', name: 'PX-2000 Precision Gear', category: 'Gaming', stock: 340, reorderPoint: 100, price: 89.99, cost: 42.00, status: 'In Stock', location: 'Warehouse D', lastUpdated: '2024-10-24' },
-  { id: 8, sku: 'USB-C-HUB-7', name: 'USB-C Hub 7-Port', category: 'Peripherals', stock: 0, reorderPoint: 60, price: 59.99, cost: 22.00, status: 'Out of Stock', location: 'Warehouse A', lastUpdated: '2024-10-18' },
-  { id: 9, sku: 'LXM-9912', name: 'LX-Micro Sensor', category: 'Components', stock: 88, reorderPoint: 50, price: 34.50, cost: 12.00, status: 'In Stock', location: 'Warehouse C', lastUpdated: '2024-10-23' },
-  { id: 10, sku: 'KB-MECH-TKL', name: 'Mechanical Keyboard TKL', category: 'Peripherals', stock: 175, reorderPoint: 60, price: 119.99, cost: 58.00, status: 'In Stock', location: 'Warehouse B', lastUpdated: '2024-10-24' },
-];
+export const fetchProducts = createAsyncThunk(
+  'products/fetchAll',
+  async (params, { rejectWithValue }) => {
+    try {
+      const { data } = await api.get('/products', { params });
+      return data.data;
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.message || 'Failed to fetch products',
+      );
+    }
+  },
+);
+export const fetchProductsById = createAsyncThunk(
+  'products/fetchById',
+  async (id, { rejectWithValue }) => {
+    try {
+      const { data } = await api.get(`/products/${id}`);
+      return data.data.product;
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.message || 'Failed to fetch product',
+      );
+    }
+  },
+);
+
+export const createProductAPI = createAsyncThunk(
+  'products/createproduct',
+  async (payload, { rejectWithValue }) => {
+    try {
+      const { data } = await api.post(`/products`, payload);
+      return data.data.product;
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.message || 'Failed to create product',
+      );
+    }
+  },
+);
+
+export const updateProductAPI = createAsyncThunk(
+  'products/updateproduct',
+  async (id, { rejectWithValue }) => {
+    try {
+      const { data } = await api.post(`/products/${id}`);
+      return data.data.product;
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.message || 'Failed to Update product',
+      );
+    }
+  },
+);
+
+export const deleteProductAPI = createAsyncThunk(
+  'products/deleteproduct',
+  async (id, { rejectWithValue }) => {
+    try {
+      const { data } = await api.delete(`/products/${id}`);
+      return data.data.product;
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.message || 'Failed to Delete product',
+      );
+    }
+  },
+);
+
+export const adjustStockAPI = createAsyncThunk(
+  'products/adjustStock',
+  async ({ id, quantity, note }, { rejectWithValue }) => {
+    try {
+      const { data } = await api.patch(`/products/${id}/stock`, {
+        quantity,
+        note,
+      });
+      return data.data.product;
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.message || 'Failed to adjust stock',
+      );
+    }
+  },
+);
 
 const productsSlice = createSlice({
   name: 'products',
   initialState: {
-    items: initialProducts,
+    items: [],
+    meta: null,
     selectedProduct: null,
     loading: false,
     error: null,
@@ -24,28 +99,108 @@ const productsSlice = createSlice({
     sortConfig: { field: 'name', direction: 'asc' },
   },
   reducers: {
-    setLoading(state, action) { state.loading = action.payload; },
-    setError(state, action) { state.error = action.payload; },
+    setLoading(state, action) {
+      state.loading = action.payload;
+    },
+    setError(state, action) {
+      state.error = action.payload;
+    },
     addProduct(state, action) {
-      const newId = Math.max(...state.items.map(p => p.id)) + 1;
-      state.items.push({ ...action.payload, id: newId, lastUpdated: new Date().toISOString().split('T')[0] });
+      const newId = Math.max(...state.items.map((p) => p.id)) + 1;
+      state.items.push({
+        ...action.payload,
+        id: newId,
+        lastUpdated: new Date().toISOString().split('T')[0],
+      });
     },
     updateProduct(state, action) {
-      const idx = state.items.findIndex(p => p.id === action.payload.id);
-      if (idx !== -1) state.items[idx] = { ...action.payload, lastUpdated: new Date().toISOString().split('T')[0] };
+      const idx = state.items.findIndex((p) => p.id === action.payload.id);
+      if (idx !== -1)
+        state.items[idx] = {
+          ...action.payload,
+          lastUpdated: new Date().toISOString().split('T')[0],
+        };
     },
     deleteProduct(state, action) {
-      state.items = state.items.filter(p => p.id !== action.payload);
+      state.items = state.items.filter((p) => p.id !== action.payload);
     },
-    setSelectedProduct(state, action) { state.selectedProduct = action.payload; },
-    setFilters(state, action) { state.filters = { ...state.filters, ...action.payload }; },
-    setSortConfig(state, action) { state.sortConfig = action.payload; },
+    setSelectedProduct(state, action) {
+      state.selectedProduct = action.payload;
+    },
+    setFilters(state, action) {
+      state.filters = { ...state.filters, ...action.payload };
+    },
+    setSortConfig(state, action) {
+      state.sortConfig = action.payload;
+    },
+  },
+  extraReducers: (builder) => {
+    const pending = (state) => {
+      state.loading = true;
+      state.error = null;
+    };
+    const rejected = (state, action) => {
+      state.loading = false;
+      state.error = action.payload;
+    };
+    builder
+      // fetchAll
+      .addCase(fetchProducts.pending, pending)
+      .addCase(fetchProducts.fulfilled, (state, action) => {
+        state.loading = false;
+        state.items = action.payload.products;
+        state.meta = action.payload.meta || null;
+      })
+      .addCase(fetchProducts.rejected, rejected)
+      // fetchById
+      .addCase(fetchProductsById.pending, pending)
+      .addCase(fetchProductsById.fulfilled, (state, action) => {
+        state.loading = false;
+        state.selectedProduct = action.payload;
+      })
+      .addCase(fetchProductsById.rejected, rejected)
+      // create
+      .addCase(createProductAPI.pending, pending)
+      .addCase(createProductAPI.fulfilled, (state, action) => {
+        state.loading = false;
+        state.items.unshift(action.payload);
+      })
+      .addCase(createProductAPI.rejected, rejected)
+      // update
+      .addCase(updateProductAPI.pending, pending)
+      .addCase(updateProductAPI.fulfilled, (state, action) => {
+        state.loading = false;
+        const idx = state.items.findIndex((p) => p._id === action.payload._id);
+        if (idx !== -1) state.items[idx] = action.payload;
+      })
+      .addCase(updateProductAPI.rejected, rejected)
+      // delete
+      .addCase(deleteProductAPI.pending, pending)
+      .addCase(deleteProductAPI.fulfilled, (state, action) => {
+        state.loading = false;
+        state.items = state.items.filter((p) => p._id !== action.payload);
+      })
+      .addCase(deleteProductAPI.rejected, rejected)
+      // adjustStock
+      .addCase(adjustStockAPI.pending, pending)
+      .addCase(adjustStockAPI.fulfilled, (state, action) => {
+        state.loading = false;
+        const idx = state.items.findIndex((p) => p._id === action.payload._id);
+        if (idx !== -1) state.items[idx] = action.payload;
+      })
+      .addCase(adjustStockAPI.rejected, rejected);
   },
 });
 
 export const {
-  setLoading, setError, addProduct, updateProduct, deleteProduct,
-  setSelectedProduct, setFilters, setSortConfig
+  setLoading,
+  setError,
+  addProduct,
+  updateProduct,
+  deleteProduct,
+  setSelectedProduct,
+  setFilters,
+  setSortConfig,
 } = productsSlice.actions;
 
 export default productsSlice.reducer;
