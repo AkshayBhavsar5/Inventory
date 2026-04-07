@@ -114,7 +114,7 @@ function TransactionForm({
           <Grid item xs={4}>
             <TextField
               fullWidth
-              label="Unit Price ($)"
+              label="Unit Price (₹)"
               type="number"
               value={form.unitPrice}
               onChange={(e) => onChange({ unitPrice: e.target.value })}
@@ -242,7 +242,9 @@ function TxnCard({ t, typeColor, typeText }) {
               fontVariantNumeric: 'tabular-nums',
             }}
           >
-            ${t.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            ₹
+            {t.total?.toLocaleString(undefined, { minimumFractionDigits: 2 }) ||
+              '0.00'}
           </Typography>
         </Box>
         <Box>
@@ -308,9 +310,38 @@ export default function Transactions() {
   });
   const ROWS = isMobile ? 5 : 8;
 
+  const mappedItems = useMemo(() => {
+    return items.map((t) => {
+      const isPurchase = t.type === 'PURCHASE' || t.type === 'Purchase';
+      const isSale = t.type === 'SALE' || t.type === 'Sale';
+      const parsedQty = t.quantity || 0;
+      const parsedPrice = t.costPrice || 0;
+
+      return {
+        ...t,
+        id: t._id || t.id,
+        type: isPurchase
+          ? 'Purchase'
+          : isSale
+            ? 'Sale'
+            : t.type || 'Adjustment',
+        sku: t.productId?.sku,
+        productName: t.productId?.name,
+        qty: Math.abs(parsedQty),
+        unitPrice: parsedPrice,
+        total: t.totalAmount || t.total || Math.abs(parsedQty) * parsedPrice,
+        date: t.createdAt
+          ? new Date(t.createdAt).toLocaleString()
+          : t.date || '-',
+        by: t.user?.name || t.by || '-',
+        status: t.status || 'Completed',
+      };
+    });
+  }, [items]);
+
   const filtered = useMemo(
     () =>
-      items.filter((t) => {
+      mappedItems.filter((t) => {
         const matchSearch =
           !filters.search ||
           t.productName.toLowerCase().includes(filters.search.toLowerCase()) ||
@@ -319,7 +350,7 @@ export default function Transactions() {
         const matchType = filters.type === 'All' || t.type === filters.type;
         return matchSearch && matchType;
       }),
-    [items, filters],
+    [mappedItems, filters],
   );
 
   useEffect(() => {
@@ -330,12 +361,12 @@ export default function Transactions() {
   const paginated = filtered.slice(page * ROWS, page * ROWS + ROWS);
 
   const submitPurchase = () => {
-    if (!newPurchase.sku || !newPurchase.qty) return;
+    if (!newPurchase.sku || !newPurchase.quantity) return;
     dispatch(
       createPurchaseAPI({
         ...newPurchase,
-        quantity: Number(newPurchase.qty),
-        unitPrice: Number(newPurchase.unitPrice),
+        quantity: Number(newPurchase.quantity),
+        unitPrice: Number(newPurchase.costPrice),
         productId: products.find((p) => p.sku === newPurchase.sku)?._id,
       }),
     );
@@ -361,15 +392,15 @@ export default function Transactions() {
     setSnackbar({ open: true, message: 'Sale recorded!', severity: 'success' });
   };
 
-  const totalSales = items
+  const totalSales = mappedItems
     .filter((t) => t.type === 'Sale')
-    .reduce((s, t) => s + t.total, 0);
-  const totalPurchases = items
+    .reduce((s, t) => s + (t.total || 0), 0);
+  const totalPurchases = mappedItems
     .filter((t) => t.type === 'Purchase')
-    .reduce((s, t) => s + t.total, 0);
-  const totalUnitsOut = items
+    .reduce((s, t) => s + (t.total || 0), 0);
+  const totalUnitsOut = mappedItems
     .filter((t) => t.type === 'Sale')
-    .reduce((s, t) => s + t.qty, 0);
+    .reduce((s, t) => s + (t.qty || 0), 0);
 
   const typeColor = {
     Purchase: '#d6e3ff',
@@ -383,7 +414,13 @@ export default function Transactions() {
   };
 
   return (
-    <Box>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '15px',
+      }}
+    >
       <Header
         title="Transactions"
         subtitle="Log and monitor inventory movements."
@@ -393,7 +430,7 @@ export default function Transactions() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
         <StatCard
           title="Sales Revenue"
-          value={`$${(totalSales / 1000).toFixed(1)}K`}
+          value={`₹${(totalSales / 1000).toFixed(1)}K`}
           subtitle="Completed sales"
           trend={4.2}
           accentColor="#a8c8ff"
@@ -401,7 +438,7 @@ export default function Transactions() {
         />
         <StatCard
           title="Total Purchases"
-          value={`$${(totalPurchases / 1000).toFixed(1)}K`}
+          value={`₹${(totalPurchases / 1000).toFixed(1)}K`}
           subtitle="Purchase orders"
           trend={-1.1}
           accentColor="#ffb691"
@@ -634,7 +671,7 @@ export default function Transactions() {
                               fontVariantNumeric: 'tabular-nums',
                             }}
                           >
-                            ${t.unitPrice.toFixed(2)}
+                            ₹{t.unitPrice?.toFixed(2) || '0.00'}
                           </Typography>
                         </TableCell>
                         <TableCell>
@@ -645,10 +682,10 @@ export default function Transactions() {
                               fontVariantNumeric: 'tabular-nums',
                             }}
                           >
-                            $
-                            {t.total.toLocaleString(undefined, {
+                            ₹
+                            {t.total?.toLocaleString(undefined, {
                               minimumFractionDigits: 2,
-                            })}
+                            }) || '0.00'}
                           </Typography>
                         </TableCell>
                         <TableCell>

@@ -81,7 +81,7 @@ const CustomTooltip = ({ active, payload, label }) => {
             key={p.name}
             sx={{ fontSize: '0.75rem', color: p.color, fontWeight: 600 }}
           >
-            {p.name}: ${p.value.toLocaleString()}
+            {p.name}: ₹{p.value.toLocaleString()}
           </Typography>
         ))}
       </Box>
@@ -108,7 +108,7 @@ export default function Dashboard() {
   const stats = [
     {
       title: 'Inventory Value',
-      value: `$${((summary.totalInventoryValue || 0) / 1000000).toFixed(2)}M`,
+      value: `₹${((summary.totalInventoryValue || 0) / 1000000).toFixed(2)}M`,
       subtitle: '4 locations',
       trend: 2.4,
       accentColor: '#a8c8ff',
@@ -147,14 +147,20 @@ export default function Dashboard() {
   }, [dispatch]);
 
   return (
-    <Box>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '15px',
+      }}
+    >
       <Header
         title="Dashboard"
         subtitle={`Status as of ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
       />
 
       {/* Stat Cards — 2 cols on mobile, 4 on desktop */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4   gap-3 ">
         {stats.map((s) => (
           <StatCard key={s.title} {...s} />
         ))}
@@ -163,7 +169,7 @@ export default function Dashboard() {
       {/* Chart + Profit — stacked on mobile */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
         {/* Sales vs Purchases Chart */}
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 bg-amber-300">
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
             <Box className="flex items-start justify-between mb-3">
               <Box>
@@ -211,7 +217,7 @@ export default function Dashboard() {
                   tick={{ fontSize: 10, fill: '#424752', fontFamily: 'Inter' }}
                   axisLine={false}
                   tickLine={false}
-                  tickFormatter={(v) => `$${v / 1000}k`}
+                  tickFormatter={(v) => `₹${v / 1000}k`}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend
@@ -326,7 +332,7 @@ export default function Dashboard() {
                     mt: 0.2,
                   }}
                 >
-                  +$420K
+                  +₹420K
                 </Typography>
               </Box>
               <Box sx={{ textAlign: 'right' }}>
@@ -349,7 +355,7 @@ export default function Dashboard() {
                     mt: 0.2,
                   }}
                 >
-                  ${((summary.grossProfit || 0) / 1000).toFixed(1)}K
+                  ₹{((summary.grossProfit || 0) / 1000).toFixed(1)}K
                 </Typography>
               </Box>
             </Box>
@@ -452,7 +458,7 @@ export default function Dashboard() {
                       color: '#00488d',
                     }}
                   >
-                    +${p.revenue.toLocaleString()}
+                    +₹{p.revenue.toLocaleString()}
                   </Typography>
                   <Typography sx={{ fontSize: '0.7rem', color: '#727783' }}>
                     {p.margin}% margin

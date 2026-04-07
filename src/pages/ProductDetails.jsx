@@ -224,7 +224,7 @@ export default function ProductDetails() {
                   mt: 0.3,
                 }}
               >
-                Cost: ${product.cost.toFixed(2)}
+                Cost: ₹{product.cost.toFixed(2)}
               </Typography>
             </Box>
           </Box>
@@ -328,12 +328,12 @@ export default function ProductDetails() {
               </Typography>
             </Box>
             {[
-              { label: 'Selling Price', value: `$${product.price.toFixed(2)}` },
-              { label: 'Cost Price', value: `$${product.cost.toFixed(2)}` },
+              { label: 'Selling Price', value: `₹${product.price.toFixed(2)}` },
+              { label: 'Cost Price', value: `₹${product.cost.toFixed(2)}` },
               { label: 'Gross Margin', value: `${margin}%`, highlight: true },
               {
                 label: 'Stock Value',
-                value: `$${(product.stock * product.cost).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                value: `₹${(product.stock * product.cost).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
               },
             ].map((f) => (
               <Box
@@ -393,7 +393,7 @@ export default function ProductDetails() {
               },
               {
                 label: 'Revenue Generated',
-                value: `$${totalRevenue.toLocaleString()}`,
+                value: `₹${totalRevenue.toLocaleString()}`,
                 highlight: true,
               },
             ].map((f) => (
@@ -507,7 +507,7 @@ export default function ProductDetails() {
                         fontVariantNumeric: 'tabular-nums',
                       }}
                     >
-                      $
+                      ₹
                       {t.total.toLocaleString(undefined, {
                         minimumFractionDigits: 2,
                       })}

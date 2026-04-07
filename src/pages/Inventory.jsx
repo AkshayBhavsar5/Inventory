@@ -39,7 +39,11 @@ import Header from '../components/layout/Header';
 import StatCard from '../components/common/StatCard';
 import StatusChip from '../components/common/StatusChip';
 import ProductModal from '../components/inventory/ProductModal';
-import { deleteProduct, setFilters } from '../store/slices/productsSlice';
+import {
+  deleteProduct,
+  deleteProductAPI,
+  setFilters,
+} from '../store/slices/productsSlice';
 import { fetchProducts } from '../store/slices/productsSlice';
 
 // Mobile card row — shown instead of table row on small screens
@@ -123,7 +127,7 @@ function ProductCard({ p, onEdit, onDelete, onView }) {
               fontVariantNumeric: 'tabular-nums',
             }}
           >
-            ${p.price.toFixed(2)}
+            ₹{p.price.toFixed(2)}
           </Typography>
         </Box>
         <Box>
@@ -214,6 +218,15 @@ export default function Inventory() {
     message: '',
     severity: 'success',
   });
+  const CATEGORIES = [
+    'All',
+    'Electronics',
+    'Home & Kitchen',
+    'Apparel',
+    'Accessories',
+    'Sports',
+  ];
+  const STATUSES = ['All', 'In Stock', 'Low Stock', 'Out of Stock', 'Critical'];
 
   const filtered = useMemo(
     () =>
@@ -238,7 +251,7 @@ export default function Inventory() {
   const paginated = filtered.slice(page * ROWS, page * ROWS + ROWS);
 
   const handleDelete = (id, name) => {
-    dispatch(deleteProduct(id));
+    dispatch(deleteProductAPI(id));
     setSnackbar({
       open: true,
       message: `"${name}" removed.`,
@@ -254,27 +267,37 @@ export default function Inventory() {
     setModalOpen(true);
   };
 
-  const totalValue = items.reduce((s, p) => s + p.stock * p.price, 0);
+  const totalValue = items.reduce((s, p) => s + p.quantity * p.sellingPrice, 0);
   const lowStockCount = items.filter(
     (p) => p.status === 'Low Stock' || p.status === 'Critical',
   ).length;
-  const healthPct = (
-    (items.filter((p) => p.status === 'In Stock').length / items.length) *
-    100
-  ).toFixed(1);
+  const healthPct =
+    items.length > 0
+      ? (
+          (items.filter((p) => p.status === 'In Stock').length / items.length) *
+          100
+        ).toFixed(1)
+      : '0.0';
+  const locationsCount = new Set(items.map((p) => p.location)).size || 0;
 
   return (
-    <Box>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '15px',
+      }}
+    >
       <Header
         title="Inventory"
-        subtitle={`${items.length} items · 4 locations`}
+        subtitle={`${items.length} items · ${locationsCount} locations`}
       />
 
       {/* Stats — 2 col on mobile */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-4 cursor-pointer">
         <StatCard
           title="Valuation"
-          value={`$${(totalValue / 1000000).toFixed(2)}M`}
+          value={`₹${(totalValue / 1000000).toFixed(2)}M`}
           subtitle="All locations"
           trend={1.8}
           accentColor="#a8c8ff"
@@ -289,30 +312,38 @@ export default function Inventory() {
           accentColor="#ffb691"
           icon={<WarningAmberIcon sx={{ fontSize: 16 }} />}
         />
-        <StatCard
+        {/* <StatCard
           title="Shipments"
-          value="12 Pending"
-          subtitle="Expected in 48h"
+          value="---" // Removed static "12 Pending"
+          subtitle="No pending orders"
           trend={0}
           accentColor="#d6e4f5"
           icon={<LocalShippingIcon sx={{ fontSize: 16 }} />}
-        />
-        <StatCard
+        /> */}
+        {/* <StatCard
           title="Health"
           value={`${healthPct}%`}
           subtitle="vs last month"
           trend={0.4}
           accentColor="#bac8d8"
           icon={<FavoriteIcon sx={{ fontSize: 16 }} />}
-        />
+        /> */}
       </div>
 
       {/* Main card */}
       <Card>
         <CardContent sx={{ p: 0 }}>
           {/* Toolbar */}
-          <Box sx={{ p: { xs: 2, md: 3 }, pb: 2 }}>
-            <Box className="flex items-center justify-between mb-3">
+          <Box
+            sx={{
+              p: { xs: 2, md: 3 },
+              pb: 2,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+            }}
+          >
+            <Box className="flex items-center justify-between  mb-3">
               <Typography
                 sx={{
                   fontWeight: 700,
@@ -356,7 +387,7 @@ export default function Inventory() {
                 onChange={(e) =>
                   dispatch(setFilters({ category: e.target.value }))
                 }
-                sx={{ flex: '1 1 110px', minWidth: 0 }}
+                sx={{ flex: '1 1 150px', minWidth: 0 }}
               >
                 {CATEGORIES.map((c) => (
                   <MenuItem key={c} value={c}>
@@ -418,12 +449,9 @@ export default function Inventory() {
                       'Product Name',
                       'Category',
                       'Stock',
-                      'Reorder',
-                      'Price',
-                      'Cost',
+                      'Selling Price',
+                      'Cost Price',
                       'Status',
-                      'Location',
-                      '',
                     ].map((h) => (
                       <TableCell key={h}>{h}</TableCell>
                     ))}
@@ -492,16 +520,10 @@ export default function Inventory() {
                                     : '#191c1d',
                             }}
                           >
-                            {p.stock.toLocaleString()}
+                            {p.quantity?.toLocaleString() || '0'}
                           </Typography>
                         </TableCell>
-                        <TableCell>
-                          <Typography
-                            sx={{ fontSize: '0.8rem', color: '#727783' }}
-                          >
-                            {p.reorderPoint}
-                          </Typography>
-                        </TableCell>
+
                         <TableCell>
                           <Typography
                             sx={{
@@ -510,7 +532,7 @@ export default function Inventory() {
                               fontVariantNumeric: 'tabular-nums',
                             }}
                           >
-                            ${p.price.toFixed(2)}
+                            ₹{p.sellingPrice?.toFixed(2)}
                           </Typography>
                         </TableCell>
                         <TableCell>
@@ -521,19 +543,10 @@ export default function Inventory() {
                               fontVariantNumeric: 'tabular-nums',
                             }}
                           >
-                            ${p.cost.toFixed(2)}
+                            ₹{p.costPrice?.toFixed(2)}
                           </Typography>
                         </TableCell>
-                        <TableCell>
-                          <StatusChip status={p.status} />
-                        </TableCell>
-                        <TableCell>
-                          <Typography
-                            sx={{ fontSize: '0.8rem', color: '#424752' }}
-                          >
-                            {p.location}
-                          </Typography>
-                        </TableCell>
+
                         <TableCell sx={{ pr: 2 }}>
                           <Box className="flex gap-0.5">
                             <Tooltip title="View">
@@ -548,7 +561,7 @@ export default function Inventory() {
                                   },
                                 }}
                               >
-                                <OpenInNewIcon sx={{ fontSize: 14 }} />
+                                <OpenInNewIcon sx={{ fontSize: 20 }} />
                               </IconButton>
                             </Tooltip>
                             <Tooltip title="Edit">
@@ -563,7 +576,7 @@ export default function Inventory() {
                                   },
                                 }}
                               >
-                                <EditIcon sx={{ fontSize: 14 }} />
+                                <EditIcon sx={{ fontSize: 20 }} />
                               </IconButton>
                             </Tooltip>
                             <Tooltip title="Delete">
@@ -578,7 +591,7 @@ export default function Inventory() {
                                   },
                                 }}
                               >
-                                <DeleteIcon sx={{ fontSize: 14 }} />
+                                <DeleteIcon sx={{ fontSize: 20 }} />
                               </IconButton>
                             </Tooltip>
                           </Box>

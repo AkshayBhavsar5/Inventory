@@ -3,7 +3,16 @@ import { Box, Typography, Chip } from '@mui/material';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 
-export default function StatCard({ title, value, subtitle, trend, trendLabel, icon, accentColor = '#a8c8ff', highlight = false }) {
+export default function StatCard({
+  title,
+  value,
+  subtitle,
+  trend,
+  trendLabel,
+  icon,
+  accentColor = '#a8c8ff',
+  highlight = false,
+}) {
   const isPositive = trend > 0;
 
   return (
@@ -46,7 +55,13 @@ export default function StatCard({ title, value, subtitle, trend, trendLabel, ic
 
       <Typography
         variant="caption"
-        sx={{ color: '#727783', fontSize: '0.72rem', letterSpacing: '0.06rem', textTransform: 'uppercase', fontWeight: 600 }}
+        sx={{
+          color: '#727783',
+          fontSize: '0.72rem',
+          letterSpacing: '0.06rem',
+          textTransform: 'uppercase',
+          fontWeight: 600,
+        }}
       >
         {title}
       </Typography>
@@ -67,13 +82,22 @@ export default function StatCard({ title, value, subtitle, trend, trendLabel, ic
 
       <Box className="flex items-center gap-2 mt-1">
         {subtitle && (
-          <Typography variant="body2" sx={{ color: '#727783', fontSize: '0.78rem' }}>
+          <Typography
+            variant="body2"
+            sx={{ color: '#727783', fontSize: '0.78rem' }}
+          >
             {subtitle}
           </Typography>
         )}
         {trend !== undefined && (
           <Chip
-            icon={isPositive ? <TrendingUpIcon sx={{ fontSize: '14px !important' }} /> : <TrendingDownIcon sx={{ fontSize: '14px !important' }} />}
+            icon={
+              isPositive ? (
+                <TrendingUpIcon sx={{ fontSize: '14px !important' }} />
+              ) : (
+                <TrendingDownIcon sx={{ fontSize: '14px !important' }} />
+              )
+            }
             label={trendLabel || `${isPositive ? '+' : ''}${trend}%`}
             size="small"
             sx={{

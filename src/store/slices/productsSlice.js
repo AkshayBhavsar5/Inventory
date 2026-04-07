@@ -44,9 +44,9 @@ export const createProductAPI = createAsyncThunk(
 
 export const updateProductAPI = createAsyncThunk(
   'products/updateproduct',
-  async (id, { rejectWithValue }) => {
+  async ({ id, data: payload }, { rejectWithValue }) => {
     try {
-      const { data } = await api.post(`/products/${id}`);
+      const { data } = await api.put(`/products/${id}`, payload);
       return data.data.product;
     } catch (err) {
       return rejectWithValue(
