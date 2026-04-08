@@ -35,7 +35,7 @@ const emptyForm = {
   sku: '',
   name: '',
   category: '',
-  stock: '',
+  quantity: '',
   reorderPoint: '',
   sellingPrice: '',
   costPrice: '',
@@ -58,8 +58,9 @@ export default function ProductModal({ open, onClose, editProduct = null }) {
     if (!form.sku) e.sku = 'SKU is required';
     if (!form.name) e.name = 'Name is required';
     if (!form.category) e.category = 'Category is required';
-    if (!form.stock && form.stock !== 0) e.stock = 'Stock is required';
-    if (!form.price) e.price = 'Price is required';
+    if (!form.quantity && form.quantity !== 0)
+      e.quantity = 'Quantity is required';
+    if (!form.sellingPrice) e.sellingPrice = 'Price is required';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -75,7 +76,7 @@ export default function ProductModal({ open, onClose, editProduct = null }) {
     // Formatting the payload
     const productPayload = {
       ...form,
-      stock: Number(form.quantity),
+      quantity: Number(form.quantity),
       sellingPrice: Number(form.sellingPrice),
       costPrice: Number(form.costPrice),
       reorderPoint: Number(form.reorderPoint),
@@ -126,9 +127,26 @@ export default function ProductModal({ open, onClose, editProduct = null }) {
         </Box>
       </DialogTitle>
 
-      <DialogContent sx={{ px: 3, pt: 2 }}>
-        <Grid container spacing={2}>
-          <Grid item xs={6}>
+      <DialogContent
+        dividers
+        sx={{
+          px: 3,
+          pt: 2,
+          pb: 3,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2.5,
+        }}
+      >
+        {/* Row 1 */}
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 2,
+            flexDirection: { xs: 'column', sm: 'row' },
+          }}
+        >
+          <Box sx={{ flex: 1 }}>
             <TextField
               fullWidth
               label="SKU *"
@@ -138,8 +156,8 @@ export default function ProductModal({ open, onClose, editProduct = null }) {
               helperText={errors.sku}
               size="small"
             />
-          </Grid>
-          <Grid item xs={6}>
+          </Box>
+          <Box sx={{ flex: 1 }}>
             <TextField
               fullWidth
               label="Category *"
@@ -156,32 +174,43 @@ export default function ProductModal({ open, onClose, editProduct = null }) {
                 </MenuItem>
               ))}
             </TextField>
-          </Grid>
+          </Box>
+        </Box>
 
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              label="Product Name *"
-              value={form.name}
-              onChange={handleChange('name')}
-              error={!!errors.name}
-              helperText={errors.name}
-              size="small"
-            />
-          </Grid>
-          <Grid item xs={4}>
+        {/* Row 2 */}
+        <Box>
+          <TextField
+            fullWidth
+            label="Product Name *"
+            value={form.name}
+            onChange={handleChange('name')}
+            error={!!errors.name}
+            helperText={errors.name}
+            size="small"
+          />
+        </Box>
+
+        {/* Row 3 */}
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 2,
+            flexDirection: { xs: 'column', sm: 'row' },
+          }}
+        >
+          <Box sx={{ flex: 1 }}>
             <TextField
               fullWidth
               label="Stock Qty *"
               type="number"
-              value={form.stock}
-              onChange={handleChange('stock')}
-              error={!!errors.stock}
-              helperText={errors.stock}
+              value={form.quantity}
+              onChange={handleChange('quantity')}
+              error={!!errors.quantity}
+              helperText={errors.quantity}
               size="small"
             />
-          </Grid>
-          <Grid item xs={4}>
+          </Box>
+          <Box sx={{ flex: 1 }}>
             <TextField
               fullWidth
               label="Reorder Point"
@@ -190,8 +219,8 @@ export default function ProductModal({ open, onClose, editProduct = null }) {
               onChange={handleChange('reorderPoint')}
               size="small"
             />
-          </Grid>
-          <Grid item xs={4}>
+          </Box>
+          <Box sx={{ flex: 1 }}>
             <TextField
               fullWidth
               label="Status"
@@ -206,30 +235,43 @@ export default function ProductModal({ open, onClose, editProduct = null }) {
                 </MenuItem>
               ))}
             </TextField>
-          </Grid>
-          <Grid item xs={6}>
+          </Box>
+        </Box>
+
+        {/* Row 4 */}
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 2,
+            flexDirection: { xs: 'column', sm: 'row' },
+          }}
+        >
+          <Box sx={{ flex: 1 }}>
             <TextField
               fullWidth
-              label="Selling Price ($) *"
+              label="Selling Price (₹) *"
               type="number"
-              value={form.price}
-              onChange={handleChange('price')}
-              error={!!errors.price}
-              helperText={errors.price}
+              value={form.sellingPrice}
+              onChange={handleChange('sellingPrice')}
+              error={!!errors.sellingPrice}
+              helperText={errors.sellingPrice}
               size="small"
             />
-          </Grid>
-          <Grid item xs={6}>
+          </Box>
+          <Box sx={{ flex: 1 }}>
             <TextField
               fullWidth
-              label="Cost Price ($)"
+              label="Cost Price (₹)"
               type="number"
-              value={form.cost}
-              onChange={handleChange('cost')}
+              value={form.costPrice}
+              onChange={handleChange('costPrice')}
               size="small"
             />
-          </Grid>
-          <Grid item xs={12}>
+          </Box>
+        </Box>
+
+        {/* {/* Row 5: Location Disabled */}
+        {/* <Box>
             <TextField
               fullWidth
               label="Location"
@@ -244,8 +286,7 @@ export default function ProductModal({ open, onClose, editProduct = null }) {
                 </MenuItem>
               ))}
             </TextField>
-          </Grid>
-        </Grid>
+        </Box> */}
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
