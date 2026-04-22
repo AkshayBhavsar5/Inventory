@@ -1,5 +1,5 @@
-import React from 'react';
-import { useSelector } from 'react-redux';
+import React, { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
   Box,
   Card,
@@ -14,7 +14,7 @@ import {
   LinearProgress,
   useMediaQuery,
   useTheme,
-} from '@mui/material';
+} from "@mui/material";
 import {
   BarChart,
   Bar,
@@ -27,33 +27,38 @@ import {
   PieChart,
   Pie,
   Legend,
-} from 'recharts';
-import Header from '../components/layout/Header';
-import StatCard from '../components/common/StatCard';
-import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
-import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import PercentIcon from '@mui/icons-material/Percent';
+} from "recharts";
+import Header from "../components/layout/Header";
+import StatCard from "../components/common/StatCard";
+import MonetizationOnIcon from "@mui/icons-material/MonetizationOn";
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import PercentIcon from "@mui/icons-material/Percent";
+import {
+  fetchReportOverview,
+  fetchProductReport,
+  fetchReportTrends,
+} from "../store/slices/reportSlice";
 
-const COLORS = ['#00488d', '#005fb8', '#a8c8ff', '#bac8d8', '#e1e3e4'];
+const COLORS = ["#00488d", "#005fb8", "#a8c8ff", "#bac8d8", "#e1e3e4"];
 
 const CustomBarTooltip = ({ active, payload, label }) => {
   if (active && payload?.length) {
     return (
       <Box
         sx={{
-          backgroundColor: '#fff',
-          borderRadius: '10px',
+          backgroundColor: "#fff",
+          borderRadius: "10px",
           p: 1.5,
-          boxShadow: '0 8px 24px rgba(25,28,29,0.1)',
+          boxShadow: "0 8px 24px rgba(25,28,29,0.1)",
           minWidth: 120,
         }}
       >
         <Typography
           sx={{
             fontWeight: 700,
-            fontSize: '0.75rem',
-            color: '#191c1d',
+            fontSize: "0.75rem",
+            color: "#191c1d",
             mb: 0.5,
           }}
         >
@@ -63,8 +68,8 @@ const CustomBarTooltip = ({ active, payload, label }) => {
           <Typography
             key={p.name}
             sx={{
-              fontSize: '0.72rem',
-              color: p.fill || '#00488d',
+              fontSize: "0.72rem",
+              color: p.fill || "#00488d",
               fontWeight: 600,
             }}
           >
@@ -79,56 +84,88 @@ const CustomBarTooltip = ({ active, payload, label }) => {
 
 export default function Reports() {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const { summary, monthlySalesData, categoryShare, topProducts } = useSelector(
-    (s) => s.dashboard,
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const dispatch = useDispatch();
+  const { overview, productReport, trends, loading } = useSelector(
+    (s) => s.report,
   );
+
+  useEffect(() => {
+    dispatch(fetchReportOverview());
+    dispatch(fetchReportTrends({ groupBy: "month" }));
+  }, [dispatch]);
+
+  useEffect(() => {
+    const firstProduct = productReport?.products?.[0];
+    const id = firstProduct?.id;
+    console.log(id);
+    if (id) {
+      dispatch(fetchProductReport({ id }));
+    }
+  }, [dispatch]);
+
+  const summary = {
+    totalRevenue: Number(overview?.totalSales || 0),
+    costOfGoods: Number(overview?.totalPurchases || 0),
+    grossProfit: Number(overview?.profitOrLoss || 0),
+    netMargin: Number(overview?.netMargin || 0),
+  };
+
+  const categoryShare = overview?.categoryShare || [];
+  const topProducts = overview?.topProducts || [];
 
   const summaryStats = [
     {
-      title: 'Total Revenue',
-      value: `₹${(summary.totalRevenue / 1000).toFixed(1)}K`,
+      title: "Total Revenue",
+      value: `₹${summary.totalRevenue}`,
       trend: 12.4,
-      accentColor: '#a8c8ff',
+      accentColor: "#a8c8ff",
       icon: <MonetizationOnIcon sx={{ fontSize: 16 }} />,
     },
     {
-      title: 'Cost of Goods',
-      value: `₹${(summary.costOfGoods / 1000).toFixed(1)}K`,
+      title: "Cost of Goods",
+      value: `₹${summary.costOfGoods}`,
       trend: -2.1,
-      accentColor: '#ffb691',
+      accentColor: "#ffb691",
       icon: <AccountBalanceIcon sx={{ fontSize: 16 }} />,
     },
     {
-      title: 'Gross Profit',
-      value: `₹${(summary.grossProfit / 1000).toFixed(1)}K`,
+      title: "Gross Profit",
+      value: `₹${summary.grossProfit.toFixed(1)}`,
       trend: 18.7,
-      accentColor: '#d6e4f5',
+      accentColor: "#d6e4f5",
       icon: <TrendingUpIcon sx={{ fontSize: 16 }} />,
     },
     {
-      title: 'Net Margin',
+      title: "Net Margin",
       value: `${summary.netMargin}%`,
       trend: 3.1,
-      accentColor: '#bac8d8',
+      accentColor: "#bac8d8",
       icon: <PercentIcon sx={{ fontSize: 16 }} />,
     },
   ];
 
-  const barData = monthlySalesData.map((m) => ({
-    ...m,
-    profit: m.sales - m.purchases,
-  }));
+  const barData = (trends || []).map((m) => {
+    const sales = Number(m.totalSales || 0);
+
+    const purchases = Number(m.totalPurchases || 0);
+    return {
+      month: m.month || m.label || m.period || "",
+      sales,
+      purchases,
+      profit: sales - purchases,
+    };
+  });
 
   return (
     <Box
       sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '15px',
+        display: "flex",
+        flexDirection: "column",
+        gap: "15px",
       }}
     >
-      <Header title="Reports" subtitle="Performance insights — FY 2024" />
+      <Header title="Reports" subtitle="Performance insights " />
 
       {/* Stats — 2×2 on mobile, 4 cols desktop */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
@@ -145,14 +182,14 @@ export default function Reports() {
             <Typography
               sx={{
                 fontWeight: 700,
-                color: '#191c1d',
-                fontSize: { xs: '0.88rem', md: '0.95rem' },
+                color: "#191c1d",
+                fontSize: { xs: "0.88rem", md: "0.95rem" },
                 mb: 0.3,
               }}
             >
               Monthly Profit Trends
             </Typography>
-            <Typography sx={{ fontSize: '0.75rem', color: '#727783', mb: 2 }}>
+            <Typography sx={{ fontSize: "0.75rem", color: "#727783", mb: 2 }}>
               Revenue vs Purchases vs Profit
             </Typography>
             <ResponsiveContainer width="100%" height={isMobile ? 180 : 230}>
@@ -168,12 +205,12 @@ export default function Reports() {
                 />
                 <XAxis
                   dataKey="month"
-                  tick={{ fontSize: 10, fill: '#424752', fontFamily: 'Inter' }}
+                  tick={{ fontSize: 10, fill: "#424752", fontFamily: "Inter" }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
-                  tick={{ fontSize: 10, fill: '#424752', fontFamily: 'Inter' }}
+                  tick={{ fontSize: 10, fill: "#424752", fontFamily: "Inter" }}
                   axisLine={false}
                   tickLine={false}
                   tickFormatter={(v) => `₹${v / 1000}k`}
@@ -182,7 +219,7 @@ export default function Reports() {
                 <Legend
                   iconType="circle"
                   iconSize={7}
-                  wrapperStyle={{ fontSize: '0.72rem' }}
+                  wrapperStyle={{ fontSize: "0.72rem" }}
                 />
                 <Bar
                   dataKey="sales"
@@ -216,14 +253,14 @@ export default function Reports() {
             <Typography
               sx={{
                 fontWeight: 700,
-                color: '#191c1d',
-                fontSize: { xs: '0.88rem', md: '0.95rem' },
+                color: "#191c1d",
+                fontSize: { xs: "0.88rem", md: "0.95rem" },
                 mb: 0.3,
               }}
             >
               Category Share
             </Typography>
-            <Typography sx={{ fontSize: '0.75rem', color: '#727783', mb: 1 }}>
+            <Typography sx={{ fontSize: "0.75rem", color: "#727783", mb: 1 }}>
               Revenue by category
             </Typography>
             <ResponsiveContainer width="100%" height={isMobile ? 150 : 180}>
@@ -252,19 +289,19 @@ export default function Reports() {
                       sx={{
                         width: 7,
                         height: 7,
-                        borderRadius: '50%',
+                        borderRadius: "50%",
                         backgroundColor: COLORS[i],
                       }}
                     />
-                    <Typography sx={{ fontSize: '0.73rem', color: '#424752' }}>
+                    <Typography sx={{ fontSize: "0.73rem", color: "#424752" }}>
                       {c.name}
                     </Typography>
                   </Box>
                   <Typography
                     sx={{
-                      fontSize: '0.73rem',
+                      fontSize: "0.73rem",
                       fontWeight: 700,
-                      color: '#191c1d',
+                      color: "#191c1d",
                     }}
                   >
                     {c.value}%
@@ -283,21 +320,21 @@ export default function Reports() {
             <Typography
               sx={{
                 fontWeight: 700,
-                color: '#191c1d',
-                fontSize: { xs: '0.88rem', md: '0.95rem' },
+                color: "#191c1d",
+                fontSize: { xs: "0.88rem", md: "0.95rem" },
               }}
             >
               Per-Product Performance
             </Typography>
-            <Typography sx={{ fontSize: '0.75rem', color: '#727783' }}>
-              Top {topProducts.length} of 248 products
+            <Typography sx={{ fontSize: "0.75rem", color: "#727783" }}>
+              Top {topProducts.length} Product by revenue
             </Typography>
           </Box>
-          <TableContainer sx={{ overflowX: 'auto' }}>
+          <TableContainer sx={{ overflowX: "auto" }}>
             <Table size="small" sx={{ minWidth: isMobile ? 480 : undefined }}>
               <TableHead>
                 <TableRow>
-                  {['Product', 'Units Sold', 'Revenue', 'Margin'].map((h) => (
+                  {["Product", "Units Sold", "Revenue", "Margin"].map((h) => (
                     <TableCell key={h}>{h}</TableCell>
                   ))}
                 </TableRow>
@@ -306,7 +343,7 @@ export default function Reports() {
                 {topProducts.map((p, i) => (
                   <TableRow
                     key={p.sku}
-                    sx={{ '&:hover': { backgroundColor: '#f2f4f5' } }}
+                    sx={{ "&:hover": { backgroundColor: "#f2f4f5" } }}
                   >
                     <TableCell>
                       <Box className="flex items-center gap-2">
@@ -314,22 +351,22 @@ export default function Reports() {
                           sx={{
                             width: 22,
                             height: 22,
-                            borderRadius: '6px',
+                            borderRadius: "6px",
                             flexShrink: 0,
                             background:
                               i < 3
-                                ? 'linear-gradient(135deg,#00488d,#005fb8)'
-                                : '#f2f4f5',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
+                                ? "linear-gradient(135deg,#00488d,#005fb8)"
+                                : "#f2f4f5",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
                           }}
                         >
                           <Typography
                             sx={{
-                              fontSize: '0.62rem',
+                              fontSize: "0.62rem",
                               fontWeight: 700,
-                              color: i < 3 ? '#fff' : '#424752',
+                              color: i < 3 ? "#fff" : "#424752",
                             }}
                           >
                             {i + 1}
@@ -339,14 +376,14 @@ export default function Reports() {
                           <Typography
                             sx={{
                               fontWeight: 600,
-                              fontSize: '0.82rem',
-                              color: '#191c1d',
+                              fontSize: "0.82rem",
+                              color: "#191c1d",
                             }}
                           >
                             {p.name}
                           </Typography>
                           <Typography
-                            sx={{ fontSize: '0.7rem', color: '#727783' }}
+                            sx={{ fontSize: "0.7rem", color: "#727783" }}
                           >
                             {p.sku}
                           </Typography>
@@ -355,44 +392,48 @@ export default function Reports() {
                     </TableCell>
                     <TableCell
                       sx={{
-                        fontVariantNumeric: 'tabular-nums',
+                        fontVariantNumeric: "tabular-nums",
                         fontWeight: 600,
-                        fontSize: '0.84rem',
+                        fontSize: "0.84rem",
                       }}
                     >
-                      {p.unitsSold.toLocaleString()}
+                      {Number(p.totalSoldQty || 0).toLocaleString()}
                     </TableCell>
                     <TableCell
                       sx={{
-                        fontVariantNumeric: 'tabular-nums',
+                        fontVariantNumeric: "tabular-nums",
                         fontWeight: 700,
-                        fontSize: '0.84rem',
-                        color: '#00488d',
+                        fontSize: "0.84rem",
+                        color: "#00488d",
                       }}
                     >
-                      ₹{p.revenue.toLocaleString()}
+                      {" "}
+                      ₹{Number(p.totalSalesAmount || 0).toLocaleString()}
                     </TableCell>
                     <TableCell>
                       <Box>
                         <Typography
                           sx={{
-                            fontSize: '0.78rem',
+                            fontSize: "0.78rem",
                             fontWeight: 600,
-                            color: '#191c1d',
+                            color: "#191c1d",
                             mb: 0.3,
                           }}
                         >
-                          {p.margin}%
+                          {p.netMargin || 0}%
                         </Typography>
                         <LinearProgress
                           variant="determinate"
-                          value={p.margin}
+                          value={Math.max(
+                            0,
+                            Math.min(100, Number(p.netMargin || 0)),
+                          )}
                           sx={{
                             height: 4,
                             borderRadius: 2,
-                            backgroundColor: '#e6e8e9',
-                            '& .MuiLinearProgress-bar': {
-                              backgroundColor: '#00488d',
+                            backgroundColor: "#e6e8e9",
+                            "& .MuiLinearProgress-bar": {
+                              backgroundColor: "#00488d",
                               borderRadius: 2,
                             },
                           }}
@@ -401,6 +442,17 @@ export default function Reports() {
                     </TableCell>
                   </TableRow>
                 ))}
+                {!loading && topProducts.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center">
+                      <Typography
+                        sx={{ fontSize: "0.82rem", color: "#727783" }}
+                      >
+                        No product performance data found.
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </TableContainer>

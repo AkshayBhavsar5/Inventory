@@ -71,6 +71,8 @@ const dashboardSlice = createSlice({
           grossProfit: action.payload.grossProfit,
           netMargin: action.payload.netMargin,
           avgMargin: action.payload.avgMargin,
+          activeShipments: action.payload.activeShipments, // ← ADD THIS
+          inventoryHealth: action.payload.inventoryHealth,
         };
         state.topProducts = action.payload.topProducts || [];
         state.categoryShare = action.payload.categoryShare || [];

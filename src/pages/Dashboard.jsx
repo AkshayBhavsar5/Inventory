@@ -100,7 +100,7 @@ export default function Dashboard() {
     useSelector((s) => s.dashboard);
 
   const lowStockProducts = useSelector((s) =>
-    s.products.items.filter(
+    (s.products.items || []).filter(
       (p) => p.status === 'Low Stock' || p.status === 'Critical',
     ),
   );
@@ -169,7 +169,7 @@ export default function Dashboard() {
       {/* Chart + Profit — stacked on mobile */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
         {/* Sales vs Purchases Chart */}
-        <Card className="lg:col-span-2 bg-amber-300">
+        <Card className="lg:col-span-2 ">
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
             <Box className="flex items-start justify-between mb-3">
               <Box>
@@ -189,7 +189,7 @@ export default function Dashboard() {
             </Box>
             <ResponsiveContainer width="100%" height={isMobile ? 160 : 210}>
               <AreaChart
-                data={monthlySalesData}
+                data={monthlySalesData || []}
                 margin={{ top: 0, right: 5, left: -25, bottom: 0 }}
               >
                 <defs>
@@ -393,79 +393,80 @@ export default function Dashboard() {
                 View All
               </Button>
             </Box>
-            {topProducts.map((p, i) => (
-              <Box
-                key={p.sku}
-                className="flex items-center justify-between cursor-pointer"
-                sx={{
-                  py: 1.2,
-                  px: 1,
-                  borderRadius: '8px',
-                  transition: 'all 0.15s',
-                  '&:hover': { backgroundColor: '#f2f4f5' },
-                }}
-                onClick={() => navigate(`/inventory/${p.sku}`)}
-              >
-                <Box className="flex items-center gap-2 min-w-0">
-                  <Box
-                    sx={{
-                      width: 26,
-                      height: 26,
-                      borderRadius: '7px',
-                      flexShrink: 0,
-                      background:
-                        i === 0
-                          ? 'linear-gradient(135deg,#00488d,#005fb8)'
-                          : '#f2f4f5',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Typography
+            {topProducts ||
+              [].map((p, i) => (
+                <Box
+                  key={p.sku}
+                  className="flex items-center justify-between cursor-pointer"
+                  sx={{
+                    py: 1.2,
+                    px: 1,
+                    borderRadius: '8px',
+                    transition: 'all 0.15s',
+                    '&:hover': { backgroundColor: '#f2f4f5' },
+                  }}
+                  onClick={() => navigate(`/inventory/${p.sku}`)}
+                >
+                  <Box className="flex items-center gap-2 min-w-0">
+                    <Box
                       sx={{
-                        fontSize: '0.68rem',
-                        fontWeight: 700,
-                        color: i === 0 ? '#fff' : '#424752',
+                        width: 26,
+                        height: 26,
+                        borderRadius: '7px',
+                        flexShrink: 0,
+                        background:
+                          i === 0
+                            ? 'linear-gradient(135deg,#00488d,#005fb8)'
+                            : '#f2f4f5',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                       }}
                     >
-                      {i + 1}
-                    </Typography>
+                      <Typography
+                        sx={{
+                          fontSize: '0.68rem',
+                          fontWeight: 700,
+                          color: i === 0 ? '#fff' : '#424752',
+                        }}
+                      >
+                        {i + 1}
+                      </Typography>
+                    </Box>
+                    <Box className="min-w-0">
+                      <Typography
+                        sx={{
+                          fontWeight: 600,
+                          fontSize: '0.82rem',
+                          color: '#191c1d',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {p.name}
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.7rem', color: '#727783' }}>
+                        SKU: {p.sku}
+                      </Typography>
+                    </Box>
                   </Box>
-                  <Box className="min-w-0">
+                  <Box sx={{ textAlign: 'right', flexShrink: 0, ml: 1 }}>
                     <Typography
                       sx={{
-                        fontWeight: 600,
-                        fontSize: '0.82rem',
-                        color: '#191c1d',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
+                        fontWeight: 700,
+                        fontSize: '0.84rem',
+                        color: '#00488d',
                       }}
                     >
-                      {p.name}
+                      +₹{p.revenue.toLocaleString()}
                     </Typography>
                     <Typography sx={{ fontSize: '0.7rem', color: '#727783' }}>
-                      SKU: {p.sku}
+                      {p.margin}% margin
                     </Typography>
                   </Box>
                 </Box>
-                <Box sx={{ textAlign: 'right', flexShrink: 0, ml: 1 }}>
-                  <Typography
-                    sx={{
-                      fontWeight: 700,
-                      fontSize: '0.84rem',
-                      color: '#00488d',
-                    }}
-                  >
-                    +₹{p.revenue.toLocaleString()}
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.7rem', color: '#727783' }}>
-                    {p.margin}% margin
-                  </Typography>
-                </Box>
-              </Box>
-            ))}
+              ))}
           </CardContent>
         </Card>
 
@@ -537,47 +538,48 @@ export default function Dashboard() {
                 Recent Activity
               </Typography>
               <List dense disablePadding>
-                {recentActivity.map((a) => {
-                  const cfg = activityColorMap[a.type];
-                  return (
-                    <ListItem key={a.id} disablePadding sx={{ mb: 1 }}>
-                      <ListItemAvatar sx={{ minWidth: 35 }}>
-                        <Avatar
-                          sx={{
-                            width: 28,
-                            height: 28,
-                            backgroundColor: cfg.bg,
-                            color: cfg.color,
-                            borderRadius: '7px',
-                          }}
-                        >
-                          {activityIconMap[a.icon]}
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={
-                          <Typography
+                {recentActivity ||
+                  [].map((a) => {
+                    const cfg = activityColorMap[a.type];
+                    return (
+                      <ListItem key={a.id} disablePadding sx={{ mb: 1 }}>
+                        <ListItemAvatar sx={{ minWidth: 35 }}>
+                          <Avatar
                             sx={{
-                              fontSize: '0.78rem',
-                              fontWeight: 600,
-                              color: '#191c1d',
-                              lineHeight: 1.3,
+                              width: 28,
+                              height: 28,
+                              backgroundColor: cfg.bg,
+                              color: cfg.color,
+                              borderRadius: '7px',
                             }}
                           >
-                            {a.title}
-                          </Typography>
-                        }
-                        secondary={
-                          <Typography
-                            sx={{ fontSize: '0.68rem', color: '#727783' }}
-                          >
-                            {a.subtitle}
-                          </Typography>
-                        }
-                      />
-                    </ListItem>
-                  );
-                })}
+                            {activityIconMap[a.icon]}
+                          </Avatar>
+                        </ListItemAvatar>
+                        <ListItemText
+                          primary={
+                            <Typography
+                              sx={{
+                                fontSize: '0.78rem',
+                                fontWeight: 600,
+                                color: '#191c1d',
+                                lineHeight: 1.3,
+                              }}
+                            >
+                              {a.title}
+                            </Typography>
+                          }
+                          secondary={
+                            <Typography
+                              sx={{ fontSize: '0.68rem', color: '#727783' }}
+                            >
+                              {a.subtitle}
+                            </Typography>
+                          }
+                        />
+                      </ListItem>
+                    );
+                  })}
               </List>
             </CardContent>
           </Card>
