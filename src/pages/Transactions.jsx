@@ -8,19 +8,10 @@ import {
   Button,
   TextField,
   MenuItem,
-  InputAdornment,
-  Table,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableBody,
-  TableContainer,
-  TablePagination,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Grid,
   IconButton,
   Snackbar,
   Alert,
@@ -28,16 +19,11 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import AddIcon from '@mui/icons-material/Add';
+import { DataGrid } from '@mui/x-data-grid';
 import CloseIcon from '@mui/icons-material/Close';
-import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
-import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import Header from '../components/layout/Header';
-import StatCard from '../components/common/StatCard';
 import StatusChip from '../components/common/StatusChip';
 import {
-  setFilters,
   setNewPurchase,
   setNewSale,
   fetchTransactions,
@@ -45,7 +31,6 @@ import {
   createSaleAPI,
 } from '../store/slices/transactionsSlice';
 import { fetchProducts } from '../store/slices/productsSlice';
-const TX_TYPES = ['All', 'Purchase', 'Sale', 'Adjustment'];
 
 function TransactionForm({
   type,
@@ -57,7 +42,7 @@ function TransactionForm({
 }) {
   return (
     <Dialog open onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ pb: 1, pt: 2.5, px: 3 }}>
+      <DialogTitle sx={{ pb: 2, pt: 2.5, px: 3 }}>
         <Box className="flex justify-between items-center">
           <Box>
             <Typography
@@ -74,9 +59,9 @@ function TransactionForm({
           </IconButton>
         </Box>
       </DialogTitle>
-      <DialogContent sx={{ px: 3, pt: 2 }}>
-        <Grid container spacing={2}>
-          <Grid item xs={6}>
+      <DialogContent sx={{ px: 5, py: 5 }}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+          <Box sx={{ flex: '1 1 calc(50% - 8px)', minWidth: 0 }}>
             <TextField
               fullWidth
               label="SKU"
@@ -91,8 +76,8 @@ function TransactionForm({
                 </MenuItem>
               ))}
             </TextField>
-          </Grid>
-          <Grid item xs={6}>
+          </Box>
+          <Box sx={{ flex: '1 1 calc(50% - 8px)', minWidth: 0 }}>
             <TextField
               fullWidth
               label="Product Name"
@@ -100,8 +85,8 @@ function TransactionForm({
               onChange={(e) => onChange({ productName: e.target.value })}
               size="small"
             />
-          </Grid>
-          <Grid item xs={4}>
+          </Box>
+          <Box sx={{ flex: '1 1 calc(33.333% - 11px)', minWidth: 0 }}>
             <TextField
               fullWidth
               label="Qty"
@@ -110,8 +95,8 @@ function TransactionForm({
               onChange={(e) => onChange({ qty: e.target.value })}
               size="small"
             />
-          </Grid>
-          <Grid item xs={4}>
+          </Box>
+          <Box sx={{ flex: '1 1 calc(33.333% - 11px)', minWidth: 0 }}>
             <TextField
               fullWidth
               label="Unit Price (₹)"
@@ -120,8 +105,8 @@ function TransactionForm({
               onChange={(e) => onChange({ unitPrice: e.target.value })}
               size="small"
             />
-          </Grid>
-          <Grid item xs={4}>
+          </Box>
+          <Box sx={{ flex: '1 1 calc(33.333% - 11px)', minWidth: 0 }}>
             <TextField
               fullWidth
               label="Ref #"
@@ -129,8 +114,8 @@ function TransactionForm({
               onChange={(e) => onChange({ reference: e.target.value })}
               size="small"
             />
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
         <Button onClick={onClose} sx={{ color: '#424752', fontWeight: 600 }}>
@@ -154,7 +139,7 @@ function TxnCard({ t, typeColor, typeText }) {
   return (
     <Box
       sx={{
-        p: 2,
+        p: 1,
         mb: 1.5,
         borderRadius: '10px',
         backgroundColor: '#fff',
@@ -262,28 +247,8 @@ function TxnCard({ t, typeColor, typeText }) {
             {t.date}
           </Typography>
         </Box>
-        <Box>
-          <Typography
-            sx={{
-              fontSize: '0.62rem',
-              color: '#727783',
-              textTransform: 'uppercase',
-              fontWeight: 600,
-            }}
-          >
-            By
-          </Typography>
-          <Typography sx={{ fontSize: '0.82rem', color: '#424752' }}>
-            {t.by}
-          </Typography>
-        </Box>
       </Box>
-      <Box className="flex items-center justify-between mt-1.5">
-        <Typography
-          sx={{ fontFamily: 'monospace', fontSize: '0.7rem', color: '#727783' }}
-        >
-          {t.id} · {t.reference}
-        </Typography>
+      <Box className="flex justify-end  mt-1.5">
         <StatusChip status={t.status} />
       </Box>
     </Box>
@@ -294,13 +259,11 @@ export default function Transactions() {
   const dispatch = useDispatch();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [mobilePage, setMobilePage] = useState(0);
 
-  const { items, filters, newPurchase, newSale } = useSelector(
-    (s) => s.transactions,
-  );
+  const { items, newPurchase, newSale } = useSelector((s) => s.transactions);
   const products = useSelector((s) => s.products.items);
 
-  const [page, setPage] = useState(0);
   const [purchaseOpen, setPurchaseOpen] = useState(false);
   const [saleOpen, setSaleOpen] = useState(false);
   const [snackbar, setSnackbar] = useState({
@@ -308,12 +271,10 @@ export default function Transactions() {
     message: '',
     severity: 'success',
   });
-  const ROWS = isMobile ? 5 : 8;
-
   const mappedItems = useMemo(() => {
     return items.map((t) => {
-      const isPurchase = t.type === 'PURCHASE' || t.type === 'Purchase';
-      const isSale = t.type === 'SALE' || t.type === 'Sale';
+      const isPurchase = t.type === 'Purchase';
+      const isSale = t.type === 'Sale';
       const parsedQty = t.quantity || 0;
       const parsedPrice = t.costPrice || 0;
 
@@ -333,32 +294,21 @@ export default function Transactions() {
         date: t.createdAt
           ? new Date(t.createdAt).toLocaleString()
           : t.date || '-',
-        by: t.user?.name || t.by || '-',
-        status: t.status || 'Completed',
       };
     });
   }, [items]);
 
-  const filtered = useMemo(
-    () =>
-      mappedItems.filter((t) => {
-        const matchSearch =
-          !filters.search ||
-          t.productName.toLowerCase().includes(filters.search.toLowerCase()) ||
-          t.sku.toLowerCase().includes(filters.search.toLowerCase()) ||
-          t.id.toLowerCase().includes(filters.search.toLowerCase());
-        const matchType = filters.type === 'All' || t.type === filters.type;
-        return matchSearch && matchType;
-      }),
-    [mappedItems, filters],
+  const MOBILE_PAGE_SIZE = 8;
+  const mobilePagedItems = mappedItems.slice(
+    mobilePage * MOBILE_PAGE_SIZE,
+    (mobilePage + 1) * MOBILE_PAGE_SIZE,
   );
-
   useEffect(() => {
-    dispatch(fetchProducts());
+    // dispatch(fetchProducts());
     dispatch(fetchTransactions());
   }, [dispatch]);
 
-  const paginated = filtered.slice(page * ROWS, page * ROWS + ROWS);
+  // const paginated = filtered.slice(page * ROWS, page * ROWS + ROWS);
 
   const submitPurchase = () => {
     if (!newPurchase.sku || !newPurchase.quantity) return;
@@ -392,16 +342,6 @@ export default function Transactions() {
     setSnackbar({ open: true, message: 'Sale recorded!', severity: 'success' });
   };
 
-  const totalSales = mappedItems
-    .filter((t) => t.type === 'Sale')
-    .reduce((s, t) => s + (t.total || 0), 0);
-  const totalPurchases = mappedItems
-    .filter((t) => t.type === 'Purchase')
-    .reduce((s, t) => s + (t.total || 0), 0);
-  const totalUnitsOut = mappedItems
-    .filter((t) => t.type === 'Sale')
-    .reduce((s, t) => s + (t.qty || 0), 0);
-
   const typeColor = {
     Purchase: '#d6e3ff',
     Sale: '#d6e4f5',
@@ -412,6 +352,52 @@ export default function Transactions() {
     Sale: '#00488d',
     Adjustment: '#424752',
   };
+  const columns = useMemo(
+    () => [
+      {
+        field: 'type',
+        headerName: 'Type',
+        minWidth: 150,
+        flex: 1,
+        renderCell: (params) => (
+          <Box
+            sx={{
+              px: 1,
+              py: 0.2,
+              textAlign: 'center',
+              borderRadius: '6px',
+              backgroundColor: typeColor[params.value],
+              color: typeText[params.value],
+              fontWeight: 700,
+              fontSize: '0.8rem',
+            }}
+          >
+            {params.value}
+          </Box>
+        ),
+      },
+      { field: 'sku', headerName: 'SKU', minWidth: 120, flex: 1 },
+      { field: 'productName', headerName: 'Product', minWidth: 180, flex: 1 },
+      { field: 'qty', headerName: 'Qty', minWidth: 90, flex: 1 },
+      {
+        field: 'unitPrice',
+        headerName: 'Unit Price',
+        minWidth: 120,
+        flex: 1,
+        valueFormatter: (v) => `₹${Number(v || 0).toFixed(2)}`,
+      },
+      {
+        field: 'total',
+        headerName: 'Total',
+        minWidth: 130,
+        flex: 1,
+        valueFormatter: (v) =>
+          `₹${Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+      },
+      { field: 'date', headerName: 'Date', minWidth: 180 },
+    ],
+    [typeColor, typeText],
+  );
 
   return (
     <Box
@@ -427,7 +413,7 @@ export default function Transactions() {
       />
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+      {/* <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
         <StatCard
           title="Sales Revenue"
           value={`₹${(totalSales / 1000).toFixed(1)}K`}
@@ -453,13 +439,13 @@ export default function Transactions() {
           accentColor="#bac8d8"
           icon={<TrendingDownIcon sx={{ fontSize: 16 }} />}
         />
-      </div>
+      </div> */}
 
       <Card>
         <CardContent sx={{ p: 0 }}>
           {/* Toolbar */}
           <Box sx={{ p: { xs: 2, md: 3 }, pb: 2 }}>
-            <Box className="flex items-center justify-between mb-3">
+            <Box className="flex flex-col gap-3 " sx={{ marginBottom: '10px' }}>
               <Typography
                 sx={{
                   fontWeight: 700,
@@ -469,12 +455,14 @@ export default function Transactions() {
               >
                 Transaction History
               </Typography>
-              <Box className="flex gap-2">
+              <Box className="flex  gap-4  ">
                 <Button
                   variant="outlined"
-                  size="small"
+                  size="medium"
                   onClick={() => setPurchaseOpen(true)}
                   sx={{
+                    width: '100%',
+                    padding: '20px',
                     borderColor: '#a8c8ff',
                     color: '#00488d',
                     fontWeight: 600,
@@ -490,253 +478,72 @@ export default function Transactions() {
                 <Button
                   variant="contained"
                   color="primary"
-                  size="small"
+                  size="medium"
                   onClick={() => setSaleOpen(true)}
-                  sx={{ fontSize: '0.75rem' }}
+                  sx={{
+                    fontSize: '0.75rem',
+                    width: '100%',
+                    padding: '20px',
+                  }}
                 >
                   + Sale
                 </Button>
               </Box>
             </Box>
-            <Box className="flex flex-wrap gap-2">
-              <TextField
-                size="small"
-                placeholder="Search…"
-                value={filters.search}
-                onChange={(e) =>
-                  dispatch(setFilters({ search: e.target.value }))
-                }
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon sx={{ fontSize: 15, color: '#727783' }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ flex: '1 1 140px', minWidth: 0 }}
-              />
-              <TextField
-                select
-                size="small"
-                value={filters.type}
-                onChange={(e) => dispatch(setFilters({ type: e.target.value }))}
-                sx={{ flex: '1 1 110px', minWidth: 0 }}
-              >
-                {TX_TYPES.map((t) => (
-                  <MenuItem key={t} value={t}>
-                    {t}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Box>
           </Box>
 
           {/* Mobile cards | Desktop table */}
           {isMobile ? (
-            <Box sx={{ px: 2, pb: 1 }}>
-              {paginated.length === 0 ? (
-                <Typography
-                  sx={{
-                    textAlign: 'center',
-                    py: 4,
-                    color: '#727783',
-                    fontSize: '0.88rem',
-                  }}
+            <Box sx={{ p: 2 }}>
+              {mobilePagedItems.map((t) => (
+                <TxnCard
+                  key={t.id}
+                  t={t}
+                  typeColor={typeColor}
+                  typeText={typeText}
+                />
+              ))}
+              <Box className="flex justify-between items-center mt-2">
+                <Button
+                  size="small"
+                  disabled={mobilePage === 0}
+                  onClick={() => setMobilePage((p) => p - 1)}
+                  sx={{ fontSize: '0.75rem', color: '#00488d' }}
                 >
-                  No transactions found.
+                  ← Prev
+                </Button>
+                <Typography sx={{ fontSize: '0.75rem', color: '#727783' }}>
+                  {mobilePage * MOBILE_PAGE_SIZE + 1}–
+                  {Math.min(
+                    (mobilePage + 1) * MOBILE_PAGE_SIZE,
+                    mappedItems.length,
+                  )}{' '}
+                  of {mappedItems.length}
                 </Typography>
-              ) : (
-                paginated.map((t) => (
-                  <TxnCard
-                    key={t.id}
-                    t={t}
-                    typeColor={typeColor}
-                    typeText={typeText}
-                  />
-                ))
-              )}
+                <Button
+                  size="small"
+                  disabled={
+                    (mobilePage + 1) * MOBILE_PAGE_SIZE >= mappedItems.length
+                  }
+                  onClick={() => setMobilePage((p) => p + 1)}
+                  sx={{ fontSize: '0.75rem', color: '#00488d' }}
+                >
+                  Next →
+                </Button>
+              </Box>
             </Box>
           ) : (
-            <TableContainer sx={{ overflowX: 'auto' }}>
-              <Table size="small" sx={{ minWidth: 960 }}>
-                <TableHead>
-                  <TableRow>
-                    {[
-                      'Txn ID',
-                      'Type',
-                      'SKU',
-                      'Product',
-                      'Qty',
-                      'Unit Price',
-                      'Total',
-                      'Date',
-                      'Ref',
-                      'By',
-                      'Status',
-                    ].map((h) => (
-                      <TableCell key={h}>{h}</TableCell>
-                    ))}
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {paginated.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={11}
-                        sx={{ textAlign: 'center', py: 5, color: '#727783' }}
-                      >
-                        No transactions found.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    paginated.map((t) => (
-                      <TableRow
-                        key={t.id}
-                        sx={{ '&:hover': { backgroundColor: '#f2f4f5' } }}
-                      >
-                        <TableCell>
-                          <Typography
-                            sx={{
-                              fontFamily: 'monospace',
-                              fontSize: '0.75rem',
-                              color: '#424752',
-                              fontWeight: 500,
-                            }}
-                          >
-                            {t.id}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Box
-                            sx={{
-                              display: 'inline-block',
-                              px: 1,
-                              py: 0.3,
-                              borderRadius: '6px',
-                              backgroundColor: typeColor[t.type],
-                              color: typeText[t.type],
-                              fontWeight: 700,
-                              fontSize: '0.7rem',
-                            }}
-                          >
-                            {t.type}
-                          </Box>
-                        </TableCell>
-                        <TableCell>
-                          <Typography
-                            sx={{
-                              fontFamily: 'monospace',
-                              fontSize: '0.75rem',
-                            }}
-                          >
-                            {t.sku}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography
-                            sx={{
-                              fontWeight: 600,
-                              fontSize: '0.82rem',
-                              color: '#191c1d',
-                              maxWidth: 150,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {t.productName}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography
-                            sx={{
-                              fontWeight: 700,
-                              fontSize: '0.84rem',
-                              fontVariantNumeric: 'tabular-nums',
-                              color:
-                                t.type === 'Sale'
-                                  ? '#93000a'
-                                  : t.type === 'Purchase'
-                                    ? '#00488d'
-                                    : '#424752',
-                            }}
-                          >
-                            {t.type === 'Sale' ? `-${t.qty}` : `+${t.qty}`}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography
-                            sx={{
-                              fontSize: '0.82rem',
-                              fontVariantNumeric: 'tabular-nums',
-                            }}
-                          >
-                            ₹{t.unitPrice?.toFixed(2) || '0.00'}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography
-                            sx={{
-                              fontWeight: 700,
-                              fontSize: '0.84rem',
-                              fontVariantNumeric: 'tabular-nums',
-                            }}
-                          >
-                            ₹
-                            {t.total?.toLocaleString(undefined, {
-                              minimumFractionDigits: 2,
-                            }) || '0.00'}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography
-                            sx={{ fontSize: '0.8rem', color: '#424752' }}
-                          >
-                            {t.date}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography
-                            sx={{
-                              fontFamily: 'monospace',
-                              fontSize: '0.75rem',
-                              color: '#424752',
-                            }}
-                          >
-                            {t.reference}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography
-                            sx={{ fontSize: '0.8rem', color: '#424752' }}
-                          >
-                            {t.by}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <StatusChip status={t.status} />
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+            <DataGrid
+              rows={mappedItems}
+              columns={columns}
+              getRowId={(row) => row.id}
+              pageSizeOptions={[10, 25, 50]}
+              initialState={{
+                pagination: { paginationModel: { pageSize: 8, page: 0 } },
+              }}
+              disableRowSelectionOnClick
+            />
           )}
-
-          <TablePagination
-            component="div"
-            count={filtered.length}
-            page={page}
-            rowsPerPage={ROWS}
-            onPageChange={(_, p) => setPage(p)}
-            rowsPerPageOptions={[ROWS]}
-            sx={{
-              borderTop: 'none',
-              color: '#424752',
-              '& .MuiTablePagination-toolbar': { fontSize: '0.78rem' },
-            }}
-          />
         </CardContent>
       </Card>
 

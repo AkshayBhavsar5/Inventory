@@ -39,12 +39,9 @@ import Header from '../components/layout/Header';
 import StatCard from '../components/common/StatCard';
 import StatusChip from '../components/common/StatusChip';
 import ProductModal from '../components/inventory/ProductModal';
-import {
-  deleteProduct,
-  deleteProductAPI,
-  setFilters,
-} from '../store/slices/productsSlice';
+import { deleteProductAPI, setFilters } from '../store/slices/productsSlice';
 import { fetchProducts } from '../store/slices/productsSlice';
+import { DataGrid } from '@mui/x-data-grid';
 
 // Mobile card row — shown instead of table row on small screens
 function ProductCard({ p, onEdit, onDelete, onView }) {
@@ -127,7 +124,7 @@ function ProductCard({ p, onEdit, onDelete, onView }) {
               fontVariantNumeric: 'tabular-nums',
             }}
           >
-            ₹{p.price.toFixed(2)}
+            ₹{p.price}
           </Typography>
         </Box>
         <Box>
@@ -167,7 +164,7 @@ function ProductCard({ p, onEdit, onDelete, onView }) {
       <Divider sx={{ my: 1.2, borderColor: 'rgba(194,198,212,0.2)' }} />
 
       <Box className="flex justify-end gap-1">
-        <IconButton
+        {/* <IconButton
           size="small"
           onClick={() => onView(p.sku)}
           sx={{
@@ -176,7 +173,7 @@ function ProductCard({ p, onEdit, onDelete, onView }) {
           }}
         >
           <OpenInNewIcon sx={{ fontSize: 16 }} />
-        </IconButton>
+        </IconButton> */}
         <IconButton
           size="small"
           onClick={() => onEdit(p)}
@@ -208,11 +205,10 @@ export default function Inventory() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-  const { items, filters } = useSelector((s) => s.products);
+  const { products, filters } = useSelector((s) => s.products);
   const [modalOpen, setModalOpen] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
-  const [page, setPage] = useState(0);
-  const ROWS = isMobile ? 6 : 8;
+  const [mobilePage, setMobilePage] = useState(0);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
@@ -226,29 +222,112 @@ export default function Inventory() {
     'Accessories',
     'Sports',
   ];
-  const STATUSES = ['All', 'In Stock', 'Low Stock', 'Out of Stock', 'Critical'];
 
-  const filtered = useMemo(
+  const mappedItems = useMemo(() => {
+    return products.map((p) => ({
+      ...p,
+      // id: p.id, // required by DataGrid
+      sku: p.sku || '-',
+      name: p.name || '-',
+      category: p.category || '-',
+      quantity: Number(p.quantity || 0),
+      sellingPrice: Number(p.sellingPrice || 0),
+      costPrice: Number(p.costPrice || 0),
+      reorderPoint: Number(p.reorderPoint || 0),
+      status: p.status || 'In Stock',
+      location: p.location || '-',
+    }));
+  }, [products]);
+  const STATUSES = ['All', 'In Stock', 'Low Stock', 'Out of Stock', 'Critical'];
+  const rows = useMemo(
     () =>
-      items.filter((p) => {
-        const matchSearch =
-          !filters.search ||
-          p.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-          p.sku.toLowerCase().includes(filters.search.toLowerCase());
-        const matchCat =
-          filters.category === 'All' || p.category === filters.category;
-        const matchStatus =
-          filters.status === 'All' || p.status === filters.status;
-        return matchSearch && matchCat && matchStatus;
-      }),
-    [items, filters],
+      products.map((p) => ({
+        ...p,
+        id: p._id,
+        stockQty: Number(p.quantity || 0),
+        sellingPriceNum: Number(p.sellingPrice || 0),
+        costPriceNum: Number(p.costPrice || 0),
+      })),
+    [products],
+  );
+  const columns = useMemo(
+    () => [
+      // { field: '_id', headerName: 'ID', minWidth: 90, flex: 0.8 ,},
+      { field: 'sku', headerName: 'SKU', minWidth: 130, flex: 0.5 },
+      { field: 'name', headerName: 'Product Name', minWidth: 180, flex: 1 },
+      { field: 'category', headerName: 'Category', minWidth: 140, flex: 1 },
+      {
+        field: 'stockQty',
+        headerName: 'Stock',
+        minWidth: 100,
+        flex: 0.5,
+        renderCell: (params) => {
+          const row = params.row;
+          const qty = Number(row.stockQty || 0);
+          const color =
+            qty === 0
+              ? '#93000a'
+              : qty < Number(row.reorderPoint || 0)
+                ? '#7b3200'
+                : '#191c1d';
+          return (
+            <Typography sx={{ fontWeight: 700, color }}>
+              {qty.toLocaleString()}
+            </Typography>
+          );
+        },
+      },
+      {
+        field: 'sellingPriceNum',
+        headerName: 'Selling Price',
+        minWidth: 140,
+        valueFormatter: (value) => `₹${Number(value || 0).toFixed(2)}`,
+      },
+      {
+        field: 'costPriceNum',
+        headerName: 'Cost Price',
+        minWidth: 130,
+        valueFormatter: (value) => `₹${Number(value || 0).toFixed(2)}`,
+      },
+      // {
+      //   field: 'status',
+      //   headerName: 'Status',
+      //   minWidth: 130,
+      //   renderCell: (params) => <StatusChip status={params.value} />,
+      // },
+      {
+        field: 'actions',
+        headerName: 'Actions',
+        minWidth: 140,
+        sortable: false,
+        filterable: false,
+        renderCell: (params) => (
+          <Box className="flex gap-0.5">
+            {/* <IconButton
+              size="small"
+              onClick={() => navigate(`/inventory/${params.row.sku}`)}
+            >
+              <OpenInNewIcon sx={{ fontSize: 18 }} />
+            </IconButton> */}
+            <IconButton size="small" onClick={() => handleEdit(params.row)}>
+              <EditIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={() => handleDelete(params.row.id, params.row.name)}
+            >
+              <DeleteIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Box>
+        ),
+      },
+    ],
+    [navigate],
   );
 
   useEffect(() => {
     dispatch(fetchProducts());
   }, [dispatch]);
-
-  const paginated = filtered.slice(page * ROWS, page * ROWS + ROWS);
 
   const handleDelete = (id, name) => {
     dispatch(deleteProductAPI(id));
@@ -267,18 +346,36 @@ export default function Inventory() {
     setModalOpen(true);
   };
 
-  const totalValue = items.reduce((s, p) => s + p.quantity * p.sellingPrice, 0);
-  const lowStockCount = items.filter(
+  const totalValue = products.reduce(
+    (s, p) => s + p.quantity * p.sellingPrice,
+    0,
+  );
+  const lowStockCount = products.filter(
     (p) => p.status === 'Low Stock' || p.status === 'Critical',
   ).length;
-  const healthPct =
-    items.length > 0
-      ? (
-          (items.filter((p) => p.status === 'In Stock').length / items.length) *
-          100
-        ).toFixed(1)
-      : '0.0';
-  const locationsCount = new Set(items.map((p) => p.location)).size || 0;
+  // const healthPct =
+  //   items.length > 0
+  //     ? (
+  //         (items.filter((p) => p.status === 'In Stock').length / items.length) *
+  //         100
+  //       ).toFixed(1)
+  //     : '0.0';
+  const typeColor = {
+    Purchase: '#d6e3ff',
+    Sale: '#d6e4f5',
+    Adjustment: '#e1e3e4',
+  };
+  const typeText = {
+    Purchase: '#001b3d',
+    Sale: '#00488d',
+    Adjustment: '#424752',
+  };
+  const locationsCount = new Set(products.map((p) => p.location)).size || 0;
+  const MOBILE_PAGE_SIZE = 8;
+  const mobilePagedItems = mappedItems.slice(
+    mobilePage * MOBILE_PAGE_SIZE,
+    (mobilePage + 1) * MOBILE_PAGE_SIZE,
+  );
 
   return (
     <Box
@@ -290,16 +387,14 @@ export default function Inventory() {
     >
       <Header
         title="Inventory"
-        subtitle={`${items.length} items · ${locationsCount} locations`}
+        subtitle={`${products.length} items · ${locationsCount} locations`}
       />
 
       {/* Stats — 2 col on mobile */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-4 cursor-pointer">
         <StatCard
           title="Valuation"
-          value={`₹${(totalValue / 1000000).toFixed(2)}M`}
-          subtitle="All locations"
-          trend={1.8}
+          value={`₹${totalValue.toLocaleString()}`}
           accentColor="#a8c8ff"
           icon={<InventoryIcon sx={{ fontSize: 16 }} />}
         />
@@ -415,208 +510,57 @@ export default function Inventory() {
 
           {/* Mobile: card list | Desktop: table */}
           {isMobile ? (
-            <Box sx={{ px: 2, pb: 1 }}>
-              {paginated.length === 0 ? (
-                <Typography
-                  sx={{
-                    textAlign: 'center',
-                    py: 4,
-                    color: '#727783',
-                    fontSize: '0.88rem',
-                  }}
+            <Box sx={{ p: 2 }}>
+              {mobilePagedItems.map((t) => (
+                <ProductCard
+                  key={t.id}
+                  p={t}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onView={(sku) => navigate(`/inventory/${sku}`)}
+                />
+              ))}
+              <Box className="flex justify-between items-center mt-2">
+                <Button
+                  size="small"
+                  disabled={mobilePage === 0}
+                  onClick={() => setMobilePage((p) => p - 1)}
+                  sx={{ fontSize: '0.75rem', color: '#00488d' }}
                 >
-                  No products match your filters.
+                  ← Prev
+                </Button>
+                <Typography sx={{ fontSize: '0.75rem', color: '#727783' }}>
+                  {mobilePage * MOBILE_PAGE_SIZE + 1}–
+                  {Math.min(
+                    (mobilePage + 1) * MOBILE_PAGE_SIZE,
+                    mappedItems.length,
+                  )}{' '}
+                  of {mappedItems.length}
                 </Typography>
-              ) : (
-                paginated.map((p) => (
-                  <ProductCard
-                    key={p.id}
-                    p={p}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    onView={(sku) => navigate(`/inventory/${sku}`)}
-                  />
-                ))
-              )}
+                <Button
+                  size="small"
+                  disabled={
+                    (mobilePage + 1) * MOBILE_PAGE_SIZE >= mappedItems.length
+                  }
+                  onClick={() => setMobilePage((p) => p + 1)}
+                  sx={{ fontSize: '0.75rem', color: '#00488d' }}
+                >
+                  Next →
+                </Button>
+              </Box>
             </Box>
           ) : (
-            <TableContainer sx={{ overflowX: 'auto' }}>
-              <Table size="small" sx={{ minWidth: 900 }}>
-                <TableHead>
-                  <TableRow>
-                    {[
-                      'SKU',
-                      'Product Name',
-                      'Category',
-                      'Stock',
-                      'Selling Price',
-                      'Cost Price',
-                      'Status',
-                    ].map((h) => (
-                      <TableCell key={h}>{h}</TableCell>
-                    ))}
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {paginated.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={10}
-                        sx={{ textAlign: 'center', py: 5, color: '#727783' }}
-                      >
-                        No products match your filters.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    paginated.map((p) => (
-                      <TableRow
-                        key={p.id}
-                        sx={{
-                          '&:hover': { backgroundColor: '#f2f4f5' },
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <TableCell>
-                          <Typography
-                            sx={{
-                              fontFamily: 'monospace',
-                              fontSize: '0.75rem',
-                              color: '#424752',
-                              fontWeight: 500,
-                            }}
-                          >
-                            {p.sku}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography
-                            sx={{
-                              fontWeight: 600,
-                              fontSize: '0.83rem',
-                              color: '#191c1d',
-                            }}
-                          >
-                            {p.name}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography
-                            sx={{ fontSize: '0.82rem', color: '#424752' }}
-                          >
-                            {p.category}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography
-                            sx={{
-                              fontWeight: 700,
-                              fontSize: '0.9rem',
-                              fontVariantNumeric: 'tabular-nums',
-                              color:
-                                p.stock === 0
-                                  ? '#93000a'
-                                  : p.stock < p.reorderPoint
-                                    ? '#7b3200'
-                                    : '#191c1d',
-                            }}
-                          >
-                            {p.quantity?.toLocaleString() || '0'}
-                          </Typography>
-                        </TableCell>
-
-                        <TableCell>
-                          <Typography
-                            sx={{
-                              fontWeight: 600,
-                              fontSize: '0.83rem',
-                              fontVariantNumeric: 'tabular-nums',
-                            }}
-                          >
-                            ₹{p.sellingPrice?.toFixed(2)}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography
-                            sx={{
-                              fontSize: '0.82rem',
-                              color: '#424752',
-                              fontVariantNumeric: 'tabular-nums',
-                            }}
-                          >
-                            ₹{p.costPrice?.toFixed(2)}
-                          </Typography>
-                        </TableCell>
-
-                        <TableCell sx={{ pr: 2 }}>
-                          <Box className="flex gap-0.5">
-                            <Tooltip title="View">
-                              <IconButton
-                                size="small"
-                                onClick={() => navigate(`/inventory/${p.sku}`)}
-                                sx={{
-                                  color: '#727783',
-                                  '&:hover': {
-                                    color: '#00488d',
-                                    backgroundColor: '#d6e4f5',
-                                  },
-                                }}
-                              >
-                                <OpenInNewIcon sx={{ fontSize: 20 }} />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Edit">
-                              <IconButton
-                                size="small"
-                                onClick={() => handleEdit(p)}
-                                sx={{
-                                  color: '#727783',
-                                  '&:hover': {
-                                    color: '#00488d',
-                                    backgroundColor: '#d6e4f5',
-                                  },
-                                }}
-                              >
-                                <EditIcon sx={{ fontSize: 20 }} />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Delete">
-                              <IconButton
-                                size="small"
-                                onClick={() => handleDelete(p.id, p.name)}
-                                sx={{
-                                  color: '#727783',
-                                  '&:hover': {
-                                    color: '#ba1a1a',
-                                    backgroundColor: '#ffdad6',
-                                  },
-                                }}
-                              >
-                                <DeleteIcon sx={{ fontSize: 20 }} />
-                              </IconButton>
-                            </Tooltip>
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+            <DataGrid
+              rows={rows}
+              columns={columns}
+              getRowId={(row) => row.id}
+              pageSizeOptions={[8, 16, 25]}
+              initialState={{
+                pagination: { paginationModel: { pageSize: 8, page: 0 } },
+              }}
+              disableRowSelectionOnClick
+            />
           )}
-
-          <TablePagination
-            component="div"
-            count={filtered.length}
-            page={page}
-            rowsPerPage={ROWS}
-            onPageChange={(_, p) => setPage(p)}
-            rowsPerPageOptions={[ROWS]}
-            sx={{
-              borderTop: 'none',
-              color: '#424752',
-              '& .MuiTablePagination-toolbar': { fontSize: '0.78rem' },
-            }}
-          />
         </CardContent>
       </Card>
 

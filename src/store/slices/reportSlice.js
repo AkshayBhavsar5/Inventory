@@ -1,26 +1,26 @@
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import api from "../../services/api";
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import api from '../../services/api';
 
 // fetchReportOverview => http://localhost:5000/api/reports/overview
 // fetchProductReport => http://localhost:5000/api/reports/product/69cb7e96cdc694d4aadc2261?&startDate=31/03/2025&endDate=5/04/2025
 // fetchReportTrands => http://localhost:5000/api/reports/trends/69cb7e96cdc694d4aadc2261?&startDate=31/03/2025&endDate=5/04/2025&groupBy=day
 
 export const fetchReportOverview = createAsyncThunk(
-  "report/overview",
+  'report/overview',
   async (params = {}, { rejectWithValue }) => {
     try {
-      const { data } = await api.get("/reports/overview", { params });
+      const { data } = await api.get('/reports/overview', { params });
       return data.data?.report || {};
     } catch (err) {
       return rejectWithValue(
-        err.response?.data?.message || "Failed to fetch reports overview",
+        err.response?.data?.message || 'Failed to fetch reports overview',
       );
     }
   },
 );
 
 export const fetchProductReport = createAsyncThunk(
-  "report/ProductReport",
+  'report/ProductReport',
   async ({ id, startDate, endDate } = {}, { rejectWithValue }) => {
     try {
       const { data } = await api.get(`/reports/product/${id}`, {
@@ -29,24 +29,24 @@ export const fetchProductReport = createAsyncThunk(
       return data.data?.report || {};
     } catch (err) {
       return rejectWithValue(
-        err.response?.data?.message || "Failed to fetch product reports",
+        err.response?.data?.message || 'Failed to fetch product reports',
       );
     }
   },
 );
 
 export const fetchReportTrends = createAsyncThunk(
-  "report/trends",
+  'report/trends',
   async ({ id, startDate, endDate, groupBy } = {}, { rejectWithValue }) => {
     try {
-      const endpoint = id ? `/reports/trends/${id}` : "/reports/trends";
+      const endpoint = id ? `/reports/trends/${id}` : '/reports/trends';
       const { data } = await api.get(endpoint, {
         params: { startDate, endDate, groupBy },
       });
       return data.data?.trends || data.data?.report || [];
     } catch (err) {
       return rejectWithValue(
-        err.response?.data?.message || "Failed to fetch trends reports",
+        err.response?.data?.message || 'Failed to fetch trends reports',
       );
     }
   },
@@ -74,22 +74,40 @@ const initialState = {
     salesCount: 0,
     profitOrLoss: 0,
     product: {
-      id: "",
-      name: "",
-      sku: "",
-      category: "",
+      id: '',
+      name: '',
+      sku: '',
+      category: '',
       currentStock: 0,
       costPrice: 0,
       sellingPrice: 0,
     },
   },
-  trends: [],
+  trends: [
+    {
+      entries: [
+        {
+          type: '',
+          totalAmount: 0,
+          totalQty: 0,
+          count: 0,
+        },
+        {
+          type: '',
+          totalAmount: 0,
+          totalQty: 0,
+          count: 0,
+        },
+      ],
+      date: '',
+    },
+  ],
   loading: false,
   error: null,
 };
 
 const reportSlice = createSlice({
-  name: "report",
+  name: 'report',
   initialState,
   reducers: {},
   extraReducers: (builder) => {

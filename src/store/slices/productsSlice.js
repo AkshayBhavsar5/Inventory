@@ -90,7 +90,23 @@ export const adjustStockAPI = createAsyncThunk(
 const productsSlice = createSlice({
   name: 'products',
   initialState: {
-    items: [],
+    products: [
+      {
+        _id: '',
+        name: '',
+        sku: '',
+        category: '',
+        description: '',
+        costPrice: 0,
+        sellingPrice: 0,
+        quantity: 0,
+        createdBy: '',
+        createdAt: '',
+        updatedAt: '',
+        __v: 0,
+      },
+    ],
+    // items: [],
     meta: null,
     selectedProduct: null,
     loading: false,
@@ -105,34 +121,34 @@ const productsSlice = createSlice({
     setError(state, action) {
       state.error = action.payload;
     },
-    addProduct(state, action) {
-      const newId = Math.max(...state.items.map((p) => p.id)) + 1;
-      state.items.push({
-        ...action.payload,
-        id: newId,
-        lastUpdated: new Date().toISOString().split('T')[0],
-      });
-    },
-    updateProduct(state, action) {
-      const idx = state.items.findIndex((p) => p.id === action.payload.id);
-      if (idx !== -1)
-        state.items[idx] = {
-          ...action.payload,
-          lastUpdated: new Date().toISOString().split('T')[0],
-        };
-    },
-    deleteProduct(state, action) {
-      state.items = state.items.filter((p) => p.id !== action.payload);
-    },
+    // addProduct(state, action) {
+    //   const newId = Math.max(...state.products.map((p) => p.id)) + 1;
+    //   state.products.push({
+    //     ...action.payload,
+    //     _id: newId,
+    //     lastUpdated: new Date().toISOString().split('T')[0],
+    //   });
+    // },
+    // updateProduct(state, action) {
+    //   const idx = state.products.findIndex((p) => p._id === action.payload._id);
+    //   if (idx !== -1)
+    //     state.items[idx] = {
+    //       ...action.payload,
+    //       lastUpdated: new Date().toISOString().split('T')[0],
+    //     };
+    // },
+    // deleteProduct(state, action) {
+    //   state.items = state.products.filter((p) => p._id !== action.payload);
+    // },
     setSelectedProduct(state, action) {
       state.selectedProduct = action.payload;
     },
     setFilters(state, action) {
       state.filters = { ...state.filters, ...action.payload };
     },
-    setSortConfig(state, action) {
-      state.sortConfig = action.payload;
-    },
+    // setSortConfig(state, action) {
+    //   state.sortConfig = action.payload;
+    // },
   },
   extraReducers: (builder) => {
     const pending = (state) => {
@@ -148,7 +164,7 @@ const productsSlice = createSlice({
       .addCase(fetchProducts.pending, pending)
       .addCase(fetchProducts.fulfilled, (state, action) => {
         state.loading = false;
-        state.items = action.payload.products;
+        state.products = action.payload.products || [];
         state.meta = action.payload.meta || null;
       })
       .addCase(fetchProducts.rejected, rejected)
@@ -163,30 +179,34 @@ const productsSlice = createSlice({
       .addCase(createProductAPI.pending, pending)
       .addCase(createProductAPI.fulfilled, (state, action) => {
         state.loading = false;
-        state.items.unshift(action.payload);
+        state.products.unshift(action.payload);
       })
       .addCase(createProductAPI.rejected, rejected)
       // update
       .addCase(updateProductAPI.pending, pending)
       .addCase(updateProductAPI.fulfilled, (state, action) => {
         state.loading = false;
-        const idx = state.items.findIndex((p) => p._id === action.payload._id);
-        if (idx !== -1) state.items[idx] = action.payload;
+        const idx = state.products.findIndex(
+          (p) => p._id === action.payload._id,
+        );
+        if (idx !== -1) state.products[idx] = action.payload;
       })
       .addCase(updateProductAPI.rejected, rejected)
       // delete
       .addCase(deleteProductAPI.pending, pending)
       .addCase(deleteProductAPI.fulfilled, (state, action) => {
         state.loading = false;
-        state.items = state.items.filter((p) => p._id !== action.payload);
+        state.products = state.products.filter((p) => p._id !== action.payload);
       })
       .addCase(deleteProductAPI.rejected, rejected)
       // adjustStock
       .addCase(adjustStockAPI.pending, pending)
       .addCase(adjustStockAPI.fulfilled, (state, action) => {
         state.loading = false;
-        const idx = state.items.findIndex((p) => p._id === action.payload._id);
-        if (idx !== -1) state.items[idx] = action.payload;
+        const idx = state.products.findIndex(
+          (p) => p._id === action.payload._id,
+        );
+        if (idx !== -1) state.products[idx] = action.payload;
       })
       .addCase(adjustStockAPI.rejected, rejected);
   },
@@ -195,12 +215,12 @@ const productsSlice = createSlice({
 export const {
   setLoading,
   setError,
-  addProduct,
-  updateProduct,
-  deleteProduct,
+  // addProduct,
+  // updateProduct,
+  // deleteProduct,
   setSelectedProduct,
   setFilters,
-  setSortConfig,
+  // setSortConfig,
 } = productsSlice.actions;
 
 export default productsSlice.reducer;
