@@ -5,8 +5,8 @@ export const fetchDashboardOverview = createAsyncThunk(
   'dashboard/overview',
   async (params = {}, { rejectWithValue }) => {
     try {
-      const { data } = await api.get('/reports/overview', { params });
-      return data.data.report;
+      const { data } = await api.get('/dashboard/overview', { params });
+      return data.data?.overview;
     } catch (err) {
       return rejectWithValue(
         err.response?.data?.message || 'Failed to fetch overview',
@@ -14,15 +14,18 @@ export const fetchDashboardOverview = createAsyncThunk(
     }
   },
 );
-export const fetchTrends = createAsyncThunk(
-  'dashboard/trends',
+
+export const fetchSalesVsPurchase = createAsyncThunk(
+  'dashboard/salesvspurchase',
   async (params = {}, { rejectWithValue }) => {
     try {
-      const { data } = await api.get('/reports/trends', { params });
-      return data.data.trends;
+      const { data } = await api.get('/dashboard/sales-vs-purchase', {
+        params,
+      });
+      return data.data?.comparison;
     } catch (err) {
       return rejectWithValue(
-        err.response?.data?.message || 'Failed to fetch trends',
+        err.response?.data?.message || 'Failed to fetch sales-vs-purchase',
       );
     }
   },
@@ -31,11 +34,30 @@ export const fetchTrends = createAsyncThunk(
 const dashboardSlice = createSlice({
   name: 'dashboard',
   initialState: {
-    summary: {},
-    monthlySalesData: [],
-    categoryShare: [],
-    topProducts: [],
-    recentActivity: [],
+    overview: {
+      totalStockOverview: {
+        totalStockValue: 0,
+        totalProducts: 0,
+        totalStockQty: 0,
+      },
+      totalSales: 0,
+      totalPurchase: 0,
+      netProfit: 0,
+    },
+    comparison: {
+      sales: 0,
+      purchase: 0,
+      bars: [
+        {
+          label: '',
+          value: 0,
+        },
+        {
+          label: '',
+          value: 0,
+        },
+      ],
+    },
     loading: false,
     error: null,
   },
@@ -45,9 +67,6 @@ const dashboardSlice = createSlice({
     },
     setError(state, action) {
       state.error = action.payload;
-    },
-    updateSummary(state, action) {
-      state.summary = { ...state.summary, ...action.payload };
     },
   },
   extraReducers: (builder) => {
@@ -60,31 +79,20 @@ const dashboardSlice = createSlice({
       state.error = action.payload;
     };
     builder
+
       .addCase(fetchDashboardOverview.pending, pending)
       .addCase(fetchDashboardOverview.fulfilled, (state, action) => {
         state.loading = false;
-        state.summary = {
-          totalInventoryValue: action.payload.totalInventoryValue,
-          lowStockItems: action.payload.lowStockItems,
-          totalRevenue: action.payload.totalRevenue,
-          costOfGoods: action.payload.costOfGoods,
-          grossProfit: action.payload.grossProfit,
-          netMargin: action.payload.netMargin,
-          avgMargin: action.payload.avgMargin,
-          activeShipments: action.payload.activeShipments, // ← ADD THIS
-          inventoryHealth: action.payload.inventoryHealth,
-        };
-        state.topProducts = action.payload.topProducts || [];
-        state.categoryShare = action.payload.categoryShare || [];
-        state.recentActivity = action.payload.recentActivity || [];
+        state.overview = { ...state.overview, ...action.payload };
       })
       .addCase(fetchDashboardOverview.rejected, rejected)
-      .addCase(fetchTrends.pending, pending)
-      .addCase(fetchTrends.fulfilled, (state, action) => {
+
+      .addCase(fetchSalesVsPurchase.pending, pending)
+      .addCase(fetchSalesVsPurchase.fulfilled, (state, action) => {
         state.loading = false;
-        state.monthlySalesData = action.payload;
+        state.comparison = { ...state.comparison, ...action.payload };
       })
-      .addCase(fetchTrends.rejected, rejected);
+      .addCase(fetchSalesVsPurchase.rejected, rejected);
   },
 });
 export const { setLoading, setError, updateSummary } = dashboardSlice.actions;

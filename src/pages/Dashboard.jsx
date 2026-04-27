@@ -32,14 +32,13 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/layout/Header';
 import StatCard from '../components/common/StatCard';
 import {
   fetchDashboardOverview,
-  fetchTrends,
+  fetchSalesVsPurchase,
 } from '../store/slices/dashboardSlice';
 
 const activityIconMap = {
@@ -95,56 +94,79 @@ export default function Dashboard() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const dispatch = useDispatch();
+  const barColorMap = {
+    SALE: '#00488d',
+    PURCHASE: '#bac8d8',
+  };
 
-  const { summary, monthlySalesData, topProducts, recentActivity } =
-    useSelector((s) => s.dashboard);
+  const { overview, comparison, loading } = useSelector((s) => s.dashboard);
 
-  const lowStockProducts = useSelector((s) =>
-    (s.products.items || []).filter(
-      (p) => p.status === 'Low Stock' || p.status === 'Critical',
-    ),
-  );
+  // const lowStockProducts = useSelector((s) =>
+  //   s.products.items.filter(
+  //     (p) => p.status === 'Low Stock' || p.status === 'Critical',
+  //   ),
+  // );
+  const stockOverview = overview?.totalStockOverview || {};
+  const summary = {
+    tRevenue: Number(stockOverview?.totalStockValue || 0),
+    tSales: Number(overview?.totalSales || 0),
+    tPurchase: Number(overview?.totalPurchase || 0),
+    nProfit: Number(overview?.netProfit || 0),
+  };
 
   const stats = [
     {
-      title: 'Inventory Value',
-      value: `₹${((summary.totalInventoryValue || 0) / 1000000).toFixed(2)}M`,
-      subtitle: '4 locations',
-      trend: 2.4,
+      title: 'Total Stock Value',
+      value: `₹${summary.tRevenue || 0}`,
+      // subtitle: '4 locations',
+      // trend: 2.4,
       accentColor: '#a8c8ff',
       icon: <MonetizationOnIcon sx={{ fontSize: 16 }} />,
     },
     {
-      title: 'Low Stock',
-      value: summary.lowStockItems || 0,
-      subtitle: 'Needs attention',
-      trend: -3,
-      trendLabel: 'Critical',
+      title: 'Total Sales',
+      value: summary.tSales || 0,
+      // subtitle: 'Needs attention',
+      // trend: -3,
+      // trendLabel: 'Critical',
       accentColor: '#ffb691',
       icon: <WarningAmberIcon sx={{ fontSize: 16 }} />,
     },
     {
-      title: 'Shipments',
-      value: summary.activeShipments || 0,
-      subtitle: 'In 48h',
-      trend: 1.2,
+      title: 'Total Purchase',
+      value: summary.tPurchase || 0,
+      // subtitle: 'In 48h',
+      // trend: 1.2,
       accentColor: '#d6e4f5',
       icon: <LocalShippingIcon sx={{ fontSize: 16 }} />,
     },
     {
-      title: 'Health',
-      value: `${summary.inventoryHealth || 0}%`,
-      subtitle: 'vs last month',
-      trend: 0.4,
+      title: 'Net Profit',
+      value: `${summary.nProfit || 0}`,
+      // subtitle: 'vs last month',
+      // trend: 0.4,
       accentColor: '#bac8d8',
       icon: <TrendingUpIcon sx={{ fontSize: 16 }} />,
     },
   ];
 
+  console.log('summary', summary);
+
   useEffect(() => {
     dispatch(fetchDashboardOverview());
-    dispatch(fetchTrends({ groupBy: 'month' }));
+    dispatch(fetchSalesVsPurchase());
   }, [dispatch]);
+
+  // const monthlySalesData = (comparison?.data || []).map((item, index) => ({
+  //   month: item?.month || `M${index + 1}`,
+  //   sales: Number(item?.sales || 0),
+  //   purchases: Number(item?.purchase || 0),
+  // }));
+
+  const barChartData = (comparison?.bars || []).map((item) => ({
+    label: item?.label || '',
+    value: Number(item?.value || 0),
+  }));
 
   return (
     <Box
@@ -169,7 +191,7 @@ export default function Dashboard() {
       {/* Chart + Profit — stacked on mobile */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
         {/* Sales vs Purchases Chart */}
-        <Card className="lg:col-span-2 ">
+        <Card className="lg:col-span-2 bg-amber-300">
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
             <Box className="flex items-start justify-between mb-3">
               <Box>
@@ -189,17 +211,13 @@ export default function Dashboard() {
             </Box>
             <ResponsiveContainer width="100%" height={isMobile ? 160 : 210}>
               <AreaChart
-                data={monthlySalesData || []}
+                data={barChartData}
                 margin={{ top: 0, right: 5, left: -25, bottom: 0 }}
               >
                 <defs>
-                  <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="valueGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#00488d" stopOpacity={0.15} />
                     <stop offset="95%" stopColor="#00488d" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="purchGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#bac8d8" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#bac8d8" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid
@@ -208,7 +226,7 @@ export default function Dashboard() {
                   vertical={false}
                 />
                 <XAxis
-                  dataKey="month"
+                  dataKey="label"
                   tick={{ fontSize: 10, fill: '#424752', fontFamily: 'Inter' }}
                   axisLine={false}
                   tickLine={false}
@@ -220,30 +238,15 @@ export default function Dashboard() {
                   tickFormatter={(v) => `₹${v / 1000}k`}
                 />
                 <Tooltip content={<CustomTooltip />} />
-                <Legend
-                  iconType="circle"
-                  iconSize={7}
-                  wrapperStyle={{ fontSize: '0.72rem', paddingTop: 6 }}
-                />
                 <Area
                   type="monotone"
-                  dataKey="sales"
-                  name="Sales"
+                  dataKey="value"
+                  name="Amount"
                   stroke="#00488d"
                   strokeWidth={2}
-                  fill="url(#salesGrad)"
-                  dot={false}
-                  activeDot={{ r: 4 }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="purchases"
-                  name="Purchases"
-                  stroke="#bac8d8"
-                  strokeWidth={2}
-                  fill="url(#purchGrad)"
-                  dot={false}
-                  activeDot={{ r: 4 }}
+                  fill="url(#valueGrad)"
+                  dot={{ r: 5, fill: '#00488d', strokeWidth: 0 }}
+                  activeDot={{ r: 6 }}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -393,80 +396,79 @@ export default function Dashboard() {
                 View All
               </Button>
             </Box>
-            {topProducts ||
-              [].map((p, i) => (
-                <Box
-                  key={p.sku}
-                  className="flex items-center justify-between cursor-pointer"
-                  sx={{
-                    py: 1.2,
-                    px: 1,
-                    borderRadius: '8px',
-                    transition: 'all 0.15s',
-                    '&:hover': { backgroundColor: '#f2f4f5' },
-                  }}
-                  onClick={() => navigate(`/inventory/${p.sku}`)}
-                >
-                  <Box className="flex items-center gap-2 min-w-0">
-                    <Box
-                      sx={{
-                        width: 26,
-                        height: 26,
-                        borderRadius: '7px',
-                        flexShrink: 0,
-                        background:
-                          i === 0
-                            ? 'linear-gradient(135deg,#00488d,#005fb8)'
-                            : '#f2f4f5',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Typography
-                        sx={{
-                          fontSize: '0.68rem',
-                          fontWeight: 700,
-                          color: i === 0 ? '#fff' : '#424752',
-                        }}
-                      >
-                        {i + 1}
-                      </Typography>
-                    </Box>
-                    <Box className="min-w-0">
-                      <Typography
-                        sx={{
-                          fontWeight: 600,
-                          fontSize: '0.82rem',
-                          color: '#191c1d',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {p.name}
-                      </Typography>
-                      <Typography sx={{ fontSize: '0.7rem', color: '#727783' }}>
-                        SKU: {p.sku}
-                      </Typography>
-                    </Box>
-                  </Box>
-                  <Box sx={{ textAlign: 'right', flexShrink: 0, ml: 1 }}>
+            {/* {topProducts.map((p, i) => (
+              <Box
+                key={p.sku}
+                className="flex items-center justify-between cursor-pointer"
+                sx={{
+                  py: 1.2,
+                  px: 1,
+                  borderRadius: '8px',
+                  transition: 'all 0.15s',
+                  '&:hover': { backgroundColor: '#f2f4f5' },
+                }}
+                onClick={() => navigate(`/inventory/${p.sku}`)}
+              >
+                <Box className="flex items-center gap-2 min-w-0">
+                  <Box
+                    sx={{
+                      width: 26,
+                      height: 26,
+                      borderRadius: '7px',
+                      flexShrink: 0,
+                      background:
+                        i === 0
+                          ? 'linear-gradient(135deg,#00488d,#005fb8)'
+                          : '#f2f4f5',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
                     <Typography
                       sx={{
+                        fontSize: '0.68rem',
                         fontWeight: 700,
-                        fontSize: '0.84rem',
-                        color: '#00488d',
+                        color: i === 0 ? '#fff' : '#424752',
                       }}
                     >
-                      +₹{p.revenue.toLocaleString()}
+                      {i + 1}
+                    </Typography>
+                  </Box>
+                  <Box className="min-w-0">
+                    <Typography
+                      sx={{
+                        fontWeight: 600,
+                        fontSize: '0.82rem',
+                        color: '#191c1d',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {p.name}
                     </Typography>
                     <Typography sx={{ fontSize: '0.7rem', color: '#727783' }}>
-                      {p.margin}% margin
+                      SKU: {p.sku}
                     </Typography>
                   </Box>
                 </Box>
-              ))}
+                <Box sx={{ textAlign: 'right', flexShrink: 0, ml: 1 }}>
+                  <Typography
+                    sx={{
+                      fontWeight: 700,
+                      fontSize: '0.84rem',
+                      color: '#00488d',
+                    }}
+                  >
+                    +₹{p.revenue.toLocaleString()}
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.7rem', color: '#727783' }}>
+                    {p.margin}% margin
+                  </Typography>
+                </Box>
+              </Box>
+            ))} */}
           </CardContent>
         </Card>
 
@@ -484,7 +486,7 @@ export default function Dashboard() {
               >
                 Critical Alerts
               </Typography>
-              {lowStockProducts.slice(0, 3).map((p) => (
+              {/* {lowStockProducts.slice(0, 3).map((p) => (
                 <Box
                   key={p.id}
                   className="flex items-center gap-2 mb-1.5"
@@ -521,7 +523,7 @@ export default function Dashboard() {
                     </Typography>
                   </Box>
                 </Box>
-              ))}
+              ))} */}
             </CardContent>
           </Card>
 
@@ -538,48 +540,47 @@ export default function Dashboard() {
                 Recent Activity
               </Typography>
               <List dense disablePadding>
-                {recentActivity ||
-                  [].map((a) => {
-                    const cfg = activityColorMap[a.type];
-                    return (
-                      <ListItem key={a.id} disablePadding sx={{ mb: 1 }}>
-                        <ListItemAvatar sx={{ minWidth: 35 }}>
-                          <Avatar
+                {/* {recentActivity.map((a) => {
+                  const cfg = activityColorMap[a.type];
+                  return (
+                    <ListItem key={a.id} disablePadding sx={{ mb: 1 }}>
+                      <ListItemAvatar sx={{ minWidth: 35 }}>
+                        <Avatar
+                          sx={{
+                            width: 28,
+                            height: 28,
+                            backgroundColor: cfg.bg,
+                            color: cfg.color,
+                            borderRadius: '7px',
+                          }}
+                        >
+                          {activityIconMap[a.icon]}
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={
+                          <Typography
                             sx={{
-                              width: 28,
-                              height: 28,
-                              backgroundColor: cfg.bg,
-                              color: cfg.color,
-                              borderRadius: '7px',
+                              fontSize: '0.78rem',
+                              fontWeight: 600,
+                              color: '#191c1d',
+                              lineHeight: 1.3,
                             }}
                           >
-                            {activityIconMap[a.icon]}
-                          </Avatar>
-                        </ListItemAvatar>
-                        <ListItemText
-                          primary={
-                            <Typography
-                              sx={{
-                                fontSize: '0.78rem',
-                                fontWeight: 600,
-                                color: '#191c1d',
-                                lineHeight: 1.3,
-                              }}
-                            >
-                              {a.title}
-                            </Typography>
-                          }
-                          secondary={
-                            <Typography
-                              sx={{ fontSize: '0.68rem', color: '#727783' }}
-                            >
-                              {a.subtitle}
-                            </Typography>
-                          }
-                        />
-                      </ListItem>
-                    );
-                  })}
+                            {a.title}
+                          </Typography>
+                        }
+                        secondary={
+                          <Typography
+                            sx={{ fontSize: '0.68rem', color: '#727783' }}
+                          >
+                            {a.subtitle}
+                          </Typography>
+                        }
+                      />
+                    </ListItem>
+                  );
+                })} */}
               </List>
             </CardContent>
           </Card>
